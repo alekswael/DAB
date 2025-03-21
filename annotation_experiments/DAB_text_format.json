@@ -1,0 +1,14 @@
+[
+  {
+    "data": {
+      "text": "Opossums are great",
+      "source_dataset": "wiki"
+    }
+  },
+  {
+    "data": {
+      "text": "And so is Sherlock Holmes",
+      "source_dataset": "wiki"
+    }
+  }
+]

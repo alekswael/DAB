@@ -1,0 +1,45 @@
+[
+    {
+        "annotations": {
+            "annotator1": {
+                "entity_mentions": [
+                    {
+                        "entity_type": "CODE",
+                        "entity_mention_id": "001-83927_a1_em1",
+                        "start_offset": 54,
+                        "end_offset": 62,
+                        "span_text": "40593/04",
+                        "edit_type": "check",
+                        "identifier_type": "DIRECT",
+                        "entity_id": "001-83927_a1_e1",
+                        "confidential_status": "NOT_CONFIDENTIAL"
+                    }
+                ]
+            },
+            "annotator10": {
+                "entity_mentions": [
+                    {
+                        "entity_type": "CODE",
+                        "entity_mention_id": "001-83927_a10_em1",
+                        "start_offset": 54,
+                        "end_offset": 62,
+                        "span_text": "40593/04",
+                        "edit_type": "insert",
+                        "identifier_type": "DIRECT",
+                        "entity_id": "001-83927_a10_e1",
+                        "confidential_status": "NOT_CONFIDENTIAL"
+                    }
+                ]
+            }
+        },
+        "quality_checked": [
+            "annotator10"
+        ],
+        "text": "Text",
+        "task": "Task",
+        "meta": {
+        },
+        "doc_id": "001-83927",
+        "dataset_type": "dev"
+    }
+]

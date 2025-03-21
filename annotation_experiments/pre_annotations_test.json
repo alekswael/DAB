@@ -1,0 +1,35 @@
+[
+  {
+    "data": {
+        "text": "Opossums are great",
+        "source_dataset": "wiki"
+    },
+    "predictions": [
+      {
+        "model_version": "DaCy",
+        "result": [
+          {
+            "id": "1",
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 9,
+              "text": "Opossums",
+              "labels": [
+                "PERSON"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "And so is Sherlock Holmes",
+      "source_dataset": "wiki"
+    }
+  }
+]

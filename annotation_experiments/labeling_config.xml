@@ -1,0 +1,95 @@
+<View style="display: flex; flexDirection: column">
+  
+  <View>
+    
+    <View>
+      <Header value="Task: Annotate the document to anonymise all people" style="text-align: center; margin-bottom: 40px" underline="true" size="2"/>
+    </View>
+    
+  </View>
+  
+  <View>
+    
+    <View whenChoiceValue="Go to step 1: Entity detection" style="text-align: center; margin-bottom: 40px">
+      <Header value="Step 1: Entity detection"/>
+      <Text name="step_1_intro" value="Annotate entities with semantic types according to Step 1 in the annotation guidelines."/>
+    </View>
+    
+    <View whenChoiceValue="Go to step 2: Masking" style="text-align: center; margin-bottom: 40px">
+      <Header value="Step 2: Masking"/>
+      <Text name="step_2_intro" value="Welcome "/>
+    </View>
+    
+    <View whenChoiceValue="Go to step 3: Final check" style="text-align: center; margin-bottom: 40px">
+      <Header value="Step 3: Final check"/>
+      <Text name="step_3_intro" value="Welcome "/>
+    </View>
+    
+  </View>
+    
+  <View style="display: flex; flexDirection: row">
+  
+    <View visibleWhen="choice-selected" whenTagName="choose_step" whenChoiceValue="Go to step 1: Entity detection,Go to step 2: Masking">
+
+      <View style="width: 200px; padding-left: 2em; margin-right: 2em; background: #f1f1f1; border-radius: 5px">
+
+        <View whenChoiceValue="Go to step 1: Entity detection">
+          <Header value="Entity types"/>
+          <Labels name="entity_mentions" toName="doc_text" choice="single" showInline="true">
+            <Label value="PERSON" background="red"/>
+            <Label value="CODE" background="blue"/>
+            <Label value="LOC" background="purple"/>
+            <Label value="ORG" background="cyan"/>
+            <Label value="DEM" background="pink"/>
+            <Label value="DATETIME" background="yellow"/>
+            <Label value="QUANTITY" background="brown"/>
+            <Label value="MISC" background="green"/>
+          </Labels>
+        </View>
+          
+        <View whenChoiceValue="Go to step 2: Masking">
+          <Header value="Identifier type"/>
+          <View visibleWhen="no-region-selected">
+            <Text name="no_region_identifier" value="Select an entity"/>
+          </View>
+          <Choices name="identifier_type" toName="doc_text" perRegion="true" required="true">
+            <Choice value="Direct"/>
+            <Choice value="Quasi"/>
+            <Choice value="No mask"/>
+          </Choices>
+
+          <Header value="Confidential status"/>
+          
+          <View visibleWhen="no-region-selected">
+            <Text name="no_region_confidential" value="Select an entity"/>
+          </View>
+          
+          <Choices name="confidential_status" toName="doc_text" perRegion="true" required="true">
+            <Choice value="BELIEF"/>
+            <Choice value="POLITICS"/>
+            <Choice value="SEX"/>
+            <Choice value="ETHNIC"/>
+            <Choice value="HEALTH"/>
+            <Choice value="NOT_CONFIDENTIAL"/>
+          </Choices>
+        </View>
+        
+      </View>
+      
+    </View> 
+      
+    <View visibleWhen="choice-selected" whenTagName="choose_step" style="height: 200px; overflow-y: auto">
+      <Text name="doc_text" value="$text" showLabels="true"/>
+    </View>
+    
+  </View>
+  
+  <View>
+    <Choices name="choose_step" toName="doc_text">
+      <Choice value="Go to step 1: Entity detection"/>
+      <Choice value="Go to step 2: Masking"/>
+      <Choice value="Go to step 3: Final check"/>
+    </Choices>
+  </View>
+  
+</View>
