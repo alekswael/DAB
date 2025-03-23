@@ -9,16 +9,28 @@
         "model_version": "DaCy",
         "result": [
           {
-            "id": "1",
             "from_name": "entity_mentions",
             "to_name": "doc_text",
             "type": "labels",
             "value": {
               "start": 0,
-              "end": 9,
+              "end": 8,
               "text": "Opossums",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 13,
+              "end": 18,
+              "text": "great",
+              "labels": [
+                "MISC"
               ]
             }
           }
@@ -30,6 +42,7 @@
     "data": {
       "text": "And so is Sherlock Holmes",
       "source_dataset": "wiki"
-    }
+    },
+    "predictions": []
   }
 ]

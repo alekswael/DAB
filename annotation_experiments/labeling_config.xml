@@ -85,7 +85,7 @@
   </View>
   
   <View>
-    <Choices name="choose_step" toName="doc_text">
+    <Choices name="choose_step" toName="choose_step">
       <Choice value="Go to step 1: Entity detection"/>
       <Choice value="Go to step 2: Masking"/>
       <Choice value="Go to step 3: Final check"/>
