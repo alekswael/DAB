@@ -1,151 +1,169 @@
 # Import
+import argparse
 import pandas as pd
+from pypdf import PdfReader
 import json
 import os
+import pytesseract  # OCR
+from pdf2image import convert_from_path  # Convert PDF pages to images
 
-data_folder = '/home/aleksander/projects/DAB/data/'
+'''
 
-data_list = []
+##### JSON STRUCTURE FOR INPUT INTO LABEL STUDIO #####
 
-def load_texts_from_subfolders(data_folder):
+data_list = [] # insert entry_dict(s)
 
-    ##### JSON STRUCTURE #####
+entry_dict = {
+    "data": {}, # insert data_dict
+    "predictions": [] # insert prediction_dict(s)
+}
 
-    entry_dict = {
-        "data": "data_dict",
-        "predictions": "predictions_list"
+data_dict = {
+    "text": "text",
+    "source_dataset": "source_dataset"
+}
+
+predictions_dict = {
+    "model_version": "model_version", # insert model version
+    "result": [] # insert result_dict(s)
+}
+
+result_dict = {
+    "from_name": "entity_mentions",
+    "to_name": "doc_text",
+    "type": "labels",
+    "value": {
+        "start": "start",
+        "end": "end",
+        "text": "word",
+        "labels": [] # insert label
     }
+}
 
-    data_dict = {
-        "text": "text",
-        "source_dataset": "source_dataset"
+ner_result = [
+    {
+        'entity_group': 'label',
+        'score': score,
+        'word': 'word_span',
+        'start': 'start',
+        'end': 'end'
     }
+]
 
-    predictions_list = [
-        {
-            "model_version": "SkandiNER",
-            "result": [] # insert result_dict(s)
-        }
-    ]
+'''
 
-    result_dict = {
-        "from_name": "entity_mentions",
-        "to_name": "doc_text",
-        "type": "labels",
-        "value": {
-            "start": "start",
-            "end": "end",
-            "text": "word",
-            "labels": [] #insert label
-        }
-    }
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="This script is used for compiling the documents into a single JSON file, using the Label Studio format.")
+    parser.add_argument(
+        '-d', '--data_path',
+        type=str, 
+        help='The path to the data folder, containing subfolders with .txt and/or .pdf files.',
+        default='/home/aleksander/projects/DAB/data/',
+        required=False
+    )
+    parser.add_argument(
+        '-s', '--save_path', 
+        type=str, 
+        help='The path for saving the final JSON dataset.',
+        default="data/DAB_dataset.json",
+        required=False
+    )
 
-    # dir_tree = os.walk(data_folder)
+    return parser.parse_args()
 
-    # _, dirs, _ = next(dir_tree) # Get subfolders in data dir
+def is_digitally_born(pdf_path):
+    """Check if a PDF contains selectable text."""
+    doc = PdfReader(pdf_path)
+    pages = doc.pages
+    text = ""
+    for page in pages:
+        text += page.extract_text()
+    return bool(text.strip())  # Return True if text is found, False otherwise
 
-    # print(dirs)
+def process_pdf(pdf_path):
+    """Process the PDF based on whether it contains text or is scanned."""
+    if is_digitally_born(pdf_path):
+
+        #print(f"{pdf_path}: Digitally born - Extracting text with PdfReader")
+        
+        doc = PdfReader(pdf_path)
+        pages = doc.pages
+        text = ""
+        for page in pages:
+            text += page.extract_text()
+        
+        return text
+
+    else:
+
+        #print(f"{pdf_path}: Scanned PDF - Applying OCR")
+
+        images = convert_from_path(pdf_path)  # Convert PDF pages to images
+        text = "\n".join([pytesseract.image_to_string(img) for img in images])
+
+        return text
+
+def process_data(data_folder):
+
+    data_list = [] # Insert entry_dict(s)
 
     dirs = [f.name for f in os.scandir(data_folder) if f.is_dir()]
-    print(dirs)
 
     for dir in dirs:
 
         dir_path = os.path.join(data_folder, dir)
         files = [f.name for f in os.scandir(dir_path) if f.is_file()]
-        print(files)
 
         for file in files:
 
-            if file.endswith(".txt"):
-
-                file_path = os.path.join(dir_path, file)
-
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    text = f.read()
-
-                    data_dict = {
-                        "text": "text",
-                        "source_dataset": "source_dataset"
-                    }
-                    
-                    data_dict["text"] = text
-                    data_dict["source_dataset"] = dir
-                    print(data_dict)
-
-                    predictions_list
-
-    return data_dict
-
-load_texts_from_subfolders(data_folder)
-
-'''
-#################### PREDICTIONS ####################
-
-predictions = load_texts_from_subfolders(data_folder)
-
-print(texts_dict)
-
-# Print the dictionary to verify
-# for filename, text in texts_dict.items():
-#     print(f"Filename: {filename}\nText: {text}\n")
-
-def load_texts_from_subfolders(data_folder):
-
-    ##### JSON STRUCTURE #####
-
-    entry_dict = {
-        "data": "data_dict",
-        "predictions": "predictions_list"
-    }
-
-    data_dict = {
-        "data": {
-            "text": "text",
-            "source_dataset": "source_dataset"
-        },
-    }
-
-    predictions_list = [
-        {
-            "model_version": "SkandiNER",
-            "result": [] # insert result_dict(s)
-        }
-    ]
-
-    result_dict = {
-        "from_name": "entity_mentions",
-        "to_name": "doc_text",
-        "type": "labels",
-        "value": {
-            "start": "start",
-            "end": "end",
-            "text": "word",
-            "labels": [] #insert label
-        }
-    }
-
-    for root, dirs, files in os.walk(data_folder):
-
-        for file in files:
+            file_path = os.path.join(dir_path, file)
 
             if file.endswith(".txt"):
 
-                file_path = os.path.join(root, file)
-
                 with open(file_path, 'r', encoding='utf-8') as f:
                     text = f.read()
-                    data_dict[] = text
+            
+            if file.endswith(".pdf"):
+                
+                text = process_pdf(file_path)
 
-    return texts_dict
+            data_dict = {
+                "text": "text",
+                "source_dataset": "source_dataset",
+                "file_name": file
+            }
+            
+            # Insert values from data
+            data_dict["text"] = text
+            data_dict["source_dataset"] = dir
 
+            # Insert into the entry dict for this data point
+            entry_dict = {
+                "data": data_dict,
+                "predictions": []
+            }
 
-texts_dict = load_texts_from_subfolders(data_folder)
+            # Finally, append to the data list
+            data_list.append(entry_dict)
 
-print(texts_dict)
+            print(f"Processed document: {file}")
 
-# Print the dictionary to verify
-# for filename, text in texts_dict.items():
-#     print(f"Filename: {filename}\nText: {text}\n")
+    return data_list
 
-'''
+def save_json(data, save_path):
+
+    # Serializing json
+    json_object = json.dumps(data, indent=2)
+    
+    # Writing to sample.json
+    with open("save_path", "w", encoding="utf-8") as outfile:
+        outfile.write(json_object)
+
+########## MAIN ##########
+def main():
+    args = parse_arguments()
+    data_list = process_data(args.data_path)
+    save_json(data_list, args.save_path)
+
+if __name__ == "__main__":
+    main()
