@@ -1,56 +1,10 @@
 # Import
 import argparse
-import pandas as pd
 from pypdf import PdfReader
 import json
 import os
 import pytesseract  # OCR
 from pdf2image import convert_from_path  # Convert PDF pages to images
-
-'''
-
-##### JSON STRUCTURE FOR INPUT INTO LABEL STUDIO #####
-
-data_list = [] # insert entry_dict(s)
-
-entry_dict = {
-    "data": {}, # insert data_dict
-    "predictions": [] # insert prediction_dict(s)
-}
-
-data_dict = {
-    "text": "text",
-    "source_dataset": "source_dataset"
-}
-
-predictions_dict = {
-    "model_version": "model_version", # insert model version
-    "result": [] # insert result_dict(s)
-}
-
-result_dict = {
-    "from_name": "entity_mentions",
-    "to_name": "doc_text",
-    "type": "labels",
-    "value": {
-        "start": "start",
-        "end": "end",
-        "text": "word",
-        "labels": [] # insert label
-    }
-}
-
-ner_result = [
-    {
-        'entity_group': 'label',
-        'score': score,
-        'word': 'word_span',
-        'start': 'start',
-        'end': 'end'
-    }
-]
-
-'''
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="This script is used for compiling the documents into a single JSON file, using the Label Studio format.")
@@ -58,14 +12,14 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the data folder, containing subfolders with .txt and/or .pdf files.',
-        default='/home/aleksander/projects/DAB/data/',
+        default='/home/aleksander/projects/DAB/data/raw/',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the final JSON dataset.',
-        default="data/DAB_dataset.json",
+        default="/home/aleksander/projects/DAB/data/DAB_dataset.json",
         required=False
     )
 
@@ -152,14 +106,11 @@ def process_data(data_folder):
 
 def save_json(data, save_path):
 
-    # Serializing json
     json_object = json.dumps(data, indent=2)
     
-    # Writing to sample.json
-    with open("save_path", "w", encoding="utf-8") as outfile:
+    with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
 
-########## MAIN ##########
 def main():
     args = parse_arguments()
     data_list = process_data(args.data_path)

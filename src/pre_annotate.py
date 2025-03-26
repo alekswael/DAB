@@ -9,14 +9,14 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the dataset in Label Studio JSON format.',
-        default='/home/aleksander/projects/DAB/data/DAB_text_format.json',
+        default='/home/aleksander/projects/DAB/data/DAB_dataset.json',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the pre-annotated JSON dataset.',
-        default="data/DAB_dataset_pre_annotated.json",
+        default="/home/aleksander/projects/DAB/data/DAB_dataset_pre_annotated.json",
         required=False
     )
     parser.add_argument(
@@ -106,7 +106,7 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
     all_entities = []
     chunk_counter = 0
 
-    for input_ids_chunk, offset_mapping_chunk, text_chunk in chunks:
+    for input_ids_chunk, offset_mapping_chunk, tokens_chunk, text_chunk in chunks:
 
         if not input_ids_chunk: #Handles empty chunks
             continue
@@ -181,10 +181,8 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
 
 def save_json(data, save_path):
 
-    # Serializing json
     json_object = json.dumps(data, indent=2)
-    
-    # Writing to sample.json
+
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
 
