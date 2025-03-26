@@ -1,55 +1,7 @@
 # Import
 import argparse
-import pandas as pd
 import json
-import os
-import sys
 from transformers import pipeline, AutoTokenizer
-
-'''
-
-##### JSON STRUCTURE FOR INPUT INTO LABEL STUDIO #####
-
-data_list = [] # insert entry_dict(s)
-
-entry_dict = {
-    "data": {}, # insert data_dict
-    "predictions": [] # insert prediction_dict(s)
-}
-
-data_dict = {
-    "text": "text",
-    "source_dataset": "source_dataset"
-}
-
-predictions_dict = {
-    "model_version": "model_version", # insert model version
-    "result": [] # insert result_dict(s)
-}
-
-result_dict = {
-    "from_name": "entity_mentions",
-    "to_name": "doc_text",
-    "type": "labels",
-    "value": {
-        "start": "start",
-        "end": "end",
-        "text": "word",
-        "labels": [] # insert label
-    }
-}
-
-ner_results = [
-    {
-        'entity_group': 'label',
-        'score': score,
-        'word': 'word_span',
-        'start': 'start',
-        'end': 'end'
-    }
-]
-
-'''
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="This script is used for compiling the documents into a single JSON file, using the Label Studio format.")
@@ -57,7 +9,6 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the dataset in Label Studio JSON format.',
-        #default='/home/aleksander/projects/DAB/data/DAB_dataset.json',
         default='/home/aleksander/projects/DAB/data/DAB_text_format.json',
         required=False
     )
@@ -99,7 +50,8 @@ def initiate_ner_pipeline(ner_model, debug):
 
     tokenizer = AutoTokenizer.from_pretrained(ner_model,
                                               clean_up_tokenization_spaces=True,
-                                              is_split_into_words=False
+                                              is_split_into_words=False,
+                                              truncation=False
                                               )
 
     if debug:
@@ -115,91 +67,73 @@ def initiate_ner_pipeline(ner_model, debug):
     return ner_pipeline, tokenizer
 
 # Function to chunk text without overlap
-def chunk_text(text, tokenizer, debug, max_length=512):
+def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
     # Tokenize
-    tokens = tokenizer(text, return_offsets_mapping=True, truncation=False, add_special_tokens=False)
+    tokens = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
 
     # Save input_ids (numerical reps of tokens) and offset_mappings
     input_ids = tokens["input_ids"]
     offset_mapping = tokens["offset_mapping"]
     
     # Init chunk list
+    chunk_counter = 0
     chunks = []
 
-    # For each entry from 0 to length of input_ids, with an increment of 510
-    for i in range(0, len(input_ids), max_length - 2):  # -2 for [CLS] and [SEP]
-        chunk = input_ids[i : i + max_length - 2] # From 0 to 0+512-2=510, next is from 510 to 510+512-2=1020
-        chunks.append((chunk, offset_mapping[i : i + max_length - 2], i))  # Store chunk start index
-        
+    # For each entry from 0 to length of input_ids, with an increment of 512
+    for i in range(0, len(input_ids), max_length):
+
+        input_ids_chunk = input_ids[i : i + max_length] # From 0 to 512, next is from 512 to 1024
+        offset_mapping_chunk = offset_mapping[i : i + max_length]
+        tokens_chunk = tokenizer.convert_ids_to_tokens(input_ids_chunk)
+        text_chunk = text[offset_mapping_chunk[0][0]:offset_mapping_chunk[-1][1]]
+
         if debug:
-            chunked_text = tokenizer.convert_ids_to_tokens(chunk)
-            print(f"Chunked text: {chunked_text}")
+
+            print(f"Chunk {chunk_counter} tokens: {tokens_chunk}")
+            print(f"Chunk {chunk_counter} text: {text_chunk}")
+            print(f"Chunk {chunk_counter} offsets: {offset_mapping_chunk}")
+
+        chunks.append((input_ids_chunk, offset_mapping_chunk, tokens_chunk, text_chunk))
+
+        chunk_counter += 1
 
     return chunks
 
-# Function to process long text
-'''def process_long_text(text, tokenizer, ner_pipeline, debug):
-
-    chunks = chunk_text(text, tokenizer, debug)
-
-    all_entities = []
-
-    formatted_texts = []
-
-    for chunk, offset_mapping, chunk_start in chunks:
-        if not chunk: #Handles empty chunks
-            continue
-
-        chunked_text = tokenizer.decode(chunk, skip_special_tokens=True)
-        
-        formatted_texts.append(chunked_text)
-
-        if debug:
-            print(f"Processing chunk: {chunked_text}")
-
-        entities = ner_pipeline(chunked_text)
-
-        print(entities)
-
-        for entity in entities:
-            entity["start"] + 
-            entity["start"] =
-            entity["start"] =
-            entity["start"] =
-    
-    formatted_text = "".join(formatted_texts)
-
-    return all_entities, formatted_text'''
-
 def process_long_text(text, tokenizer, ner_pipeline, debug):
-    chunks = chunk_text(text, tokenizer, debug)
+
+    chunks = tokenize_and_chunk_text(text, tokenizer, debug)
+
     all_entities = []
-    formatted_texts = []
+    chunk_counter = 0
 
-    for chunk, offset_mapping, chunk_start in chunks:
+    for input_ids_chunk, offset_mapping_chunk, text_chunk in chunks:
 
-        if not chunk: #Handles empty chunks
+        if not input_ids_chunk: #Handles empty chunks
             continue
 
-        chunked_text = tokenizer.decode(chunk, skip_special_tokens=True)
-        formatted_texts.append(chunked_text)
-        entities = ner_pipeline(chunked_text)
+        entities = ner_pipeline(text_chunk)
 
         for entity in entities:
             # Adjust entity positions based on chunk offset
-            entity["start"] += offset_mapping[0][0] + chunk_start
-            entity["end"] += offset_mapping[0][0] + chunk_start
+            if not chunk_counter == 0:
+                entity["start"] += offset_mapping_chunk[0][0] #+ chunk_start
+                entity["end"] += offset_mapping_chunk[0][0] #+ chunk_start
+
+            if debug:
+                print(f"Chunk {chunk_counter} entity {entity["word"]} has span: {(entity["start"], entity["end"])}")
 
         all_entities.extend(entities)
-    
-    formatted_text = "".join(formatted_texts)
 
-    return all_entities , formatted_text
+        chunk_counter += 1
+
+    return all_entities
 
 def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
     # Loop over each file
     for entry_dict in data_list:
         
+        text = entry_dict["data"]["text"]
+
         # Define the predictions_dict
         predictions_dict = {
             "model_version": ner_model, # insert model version
@@ -211,7 +145,7 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
             continue
 
         # Get the NER-predictions
-        ner_results, formatted_text = process_long_text(entry_dict["data"]["text"], tokenizer, ner_pipeline, debug)
+        ner_results = process_long_text(text, tokenizer, ner_pipeline, debug)
         
         for result in ner_results:
 
@@ -240,9 +174,8 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
             predictions_dict["result"].append(result_dict)
         
         entry_dict["predictions"].append(predictions_dict)
-        entry_dict["data"]["text"] = formatted_text
 
-        print(f"Pre-annotated document: {entry_dict["data"]["file_name"]}")
+        print(f"Done pre-annotating document: {entry_dict["data"]["file_name"]}")
     
     return data_list
 
