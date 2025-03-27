@@ -144,20 +144,6 @@ def initiate_ner_pipeline(ner_model, debug):
 
 def regex_pipeline(text):
 
-
-    def find_matches_with_indices(text, pattern):
-
-        # Compile the combined regex pattern
-        regex = re.compile(pattern)
-        
-        # Find all matches in the text
-        matches = regex.finditer(text)
-        
-        # Extract start and end indices for each match
-        indices = [(match.start(), match.end()) for match in matches]
-        
-        return indices
-
     ents = []
 
     cpr_pattern = "|".join(
@@ -167,64 +153,38 @@ def regex_pipeline(text):
         ]
     )
 
-    cprs = set(re.findall(cpr_pattern, text))
+    tlf_pattern = "|".join(
+        [
+            r"\+\d{10}",
+            r"\+\d{4} \d{2} \d{2} \d{2}",
+            r"\+\d{2} \d{8}",
+            r"\+\d{2} \d{2} \d{2} \d{2} \d{2}",
+            r"\+\d{2} \d{4} \d{4}",
+            r"\d{2} \d{4} \d{4}",
+            r"\d{2} \d{4}\-\d{4}",
+            r"\d{8}",
+            r"\d{4} \d{4}",
+            r"\d{4}\-\d{4}",
+            r"\d{2} \d{2} \d{2} \d{2}",
+        ]
+    )
+
+    mail_pattern = r"[\w\.-]+@[\w\.-]+(?:\.[\w]+)+"
 
     # Compile the regex pattern
-    regex = re.compile(email_pattern)
+    regex_cpr = re.compile(cpr_pattern)
+    regex_tlf = re.compile(tlf_pattern)
+    regex_mail = re.compile(mail_pattern)
     
     # Find all matches in the text
-    matches = regex.finditer(text)
+    matches_cpr = regex_cpr.finditer(text)
+    matches_tlf = regex_tlf.finditer(text)
+    matches_text = regex_mail.finditer(text)
     
     # Extract start and end indices for each match
     indices = [(match.start(), match.end()) for match in matches]
     
     return indices
-
-    return cprs
-
-    def find_telefon_nr(self, text: str) -> Set[str]:
-        """
-        Find telephone numbers from a text
-
-        Args:
-            text: Text to remove telephone numbers from
-
-        Returns:
-            A set of telephone number entities
-
-        """
-        tlf_pattern = "|".join(
-            [
-                r"\+\d{10}",
-                r"\+\d{4} \d{2} \d{2} \d{2}",
-                r"\+\d{2} \d{8}",
-                r"\+\d{2} \d{2} \d{2} \d{2} \d{2}",
-                r"\+\d{2} \d{4} \d{4}",
-                r"\d{2} \d{4} \d{4}",
-                r"\d{2} \d{4}\-\d{4}",
-                r"\d{8}",
-                r"\d{4} \d{4}",
-                r"\d{4}\-\d{4}",
-                r"\d{2} \d{2} \d{2} \d{2}",
-            ]
-        )
-        tlf_nrs = set(re.findall(tlf_pattern, text))
-        return tlf_nrs
-
-    def find_email(self, text: str) -> Set[str]:
-        """
-        Find emails from a text
-
-        Args:
-            text: Text to remove emails from
-
-        Returns:
-            A set of email entities
-
-        """
-        mail_pattern = r"[\w\.-]+@[\w\.-]+(?:\.[\w]+)+"
-        emails = set(re.findall(mail_pattern, text))
-        return emails
 
 # Function to chunk text without overlap
 def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
