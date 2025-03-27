@@ -1,7 +1,9 @@
 # Import
 import argparse
+import re
 import json
 from transformers import pipeline, AutoTokenizer
+import dacy
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="This script is used for compiling the documents into a single JSON file, using the Label Studio format.")
@@ -23,21 +25,36 @@ def parse_arguments():
         '-m', '--model', 
         type=str, 
         help='The NER-model used for generating pre-annotations.',
-        default="saattrupdan/nbailab-base-ner-scandi",
+        default="dacy",
         required=False
-        )
+    )
     parser.add_argument(
         '-db', '--debug', 
         action="store_true", 
         help='Set to debug mode.',
         required=False
-        )
+    )
+    parser.add_argument(
+    '-t', '--test', 
+    action="store_true", 
+    help='Set to test mode.',
+    required=False
+    )
 
     return parser.parse_args()
 
-def load_data(data_path, debug):
+def load_data(data_path, debug, test):
     with open(data_path, "r", encoding="utf-8") as doc:
         data = json.load(doc)
+
+        if test:
+
+            test_file = "pvs_5.pdf"
+
+            for entry_dict in data:
+                if entry_dict["data"]["file_name"] == test_file:
+                    data = [entry_dict]
+                    break
 
         if debug:
             print(f"Data: {data}")
@@ -46,25 +63,168 @@ def load_data(data_path, debug):
 
 def initiate_ner_pipeline(ner_model, debug):
     """Initiate NER-pipeline. Im using ScandiNER."""
-    print("Initiating model...")
+    print(f"[INFO]: Initiating {ner_model} model...")
 
-    tokenizer = AutoTokenizer.from_pretrained(ner_model,
-                                              clean_up_tokenization_spaces=True,
-                                              is_split_into_words=False,
-                                              truncation=False
-                                              )
-
+    tokenizer = AutoTokenizer.from_pretrained("saattrupdan/nbailab-base-ner-scandi",
+                                    clean_up_tokenization_spaces=True,
+                                    is_split_into_words=False,
+                                    truncation=False
+                                    )
+    
     if debug:
         print(tokenizer.init_kwargs)
         print(tokenizer)
 
-    ner_pipeline = pipeline(
-        task='ner', 
-        model=ner_model,
-        tokenizer = tokenizer,
-        aggregation_strategy='first')
+    if ner_model == "scandi_ner":
+
+        def ner_pipeline(text):
+
+            nlp = pipeline(
+                task='ner', 
+                model="saattrupdan/nbailab-base-ner-scandi",
+                tokenizer = tokenizer,
+                aggregation_strategy='first')
+            
+            ents = pipeline(text)
+
+            for ent in ents:
+
+                if ent["entity_group"] == "PER":
+                    ent["entity_group"] = "PERSON"
+            
+            return ents
+    
+    if ner_model == "dacy":
+
+        def ner_pipeline(text):
+
+            nlp = dacy.load("da_dacy_medium_ner_fine_grained-0.1.0")
+            doc = nlp(text)
+
+            ents = []
+
+            for ent in doc.ents:
+
+                if ent.label_ == "PERSON": 
+                    pass
+
+                elif ent.label_ in {"CODE", "CARDINAL"}: 
+                    ent.label_ = "CODE"
+
+                elif ent.label_ in {"LOCATION", "FACILITY", "GPE"}:
+                    ent.label_ = "LOC"
+                
+                elif ent.label_ == "ORGANIZATION":
+                    ent.label_ = "ORG"
+
+                elif ent.label_ in {"LANGUAGE", "NORP"}: 
+                    ent.label_ = "DEM"
+
+                elif ent.label_ in {"DATE", "TIME"}: 
+                    ent.label_ = "DATETIME"
+
+                elif ent.label_ in {"PERCENT", "QUANTITY", "MONEY", "ORDINAL"}: 
+                    ent.label_ = "QUANTITY"
+                
+                elif ent.label_ in {"PRODUCT", "EVENT", "WORK OF ART", "LAW"}: 
+                    ent.label_ = "MISC"
+
+                ent = {
+                    'entity_group': ent.label_,
+                    'word': ent.text,
+                    'start': ent.start_char,
+                    'end': ent.end_char
+                }
+
+                ents.append(ent)
+            
+            return ents
 
     return ner_pipeline, tokenizer
+
+def regex_pipeline(text):
+
+
+    def find_matches_with_indices(text, pattern):
+
+        # Compile the combined regex pattern
+        regex = re.compile(pattern)
+        
+        # Find all matches in the text
+        matches = regex.finditer(text)
+        
+        # Extract start and end indices for each match
+        indices = [(match.start(), match.end()) for match in matches]
+        
+        return indices
+
+    ents = []
+
+    cpr_pattern = "|".join(
+        [
+            r"[0-3]\d{1}[0-1]\d{3}-\d{4}",
+            r"[0-3]\d{1}[0-1]\d{3} \d{4}"
+        ]
+    )
+
+    cprs = set(re.findall(cpr_pattern, text))
+
+    # Compile the regex pattern
+    regex = re.compile(email_pattern)
+    
+    # Find all matches in the text
+    matches = regex.finditer(text)
+    
+    # Extract start and end indices for each match
+    indices = [(match.start(), match.end()) for match in matches]
+    
+    return indices
+
+    return cprs
+
+    def find_telefon_nr(self, text: str) -> Set[str]:
+        """
+        Find telephone numbers from a text
+
+        Args:
+            text: Text to remove telephone numbers from
+
+        Returns:
+            A set of telephone number entities
+
+        """
+        tlf_pattern = "|".join(
+            [
+                r"\+\d{10}",
+                r"\+\d{4} \d{2} \d{2} \d{2}",
+                r"\+\d{2} \d{8}",
+                r"\+\d{2} \d{2} \d{2} \d{2} \d{2}",
+                r"\+\d{2} \d{4} \d{4}",
+                r"\d{2} \d{4} \d{4}",
+                r"\d{2} \d{4}\-\d{4}",
+                r"\d{8}",
+                r"\d{4} \d{4}",
+                r"\d{4}\-\d{4}",
+                r"\d{2} \d{2} \d{2} \d{2}",
+            ]
+        )
+        tlf_nrs = set(re.findall(tlf_pattern, text))
+        return tlf_nrs
+
+    def find_email(self, text: str) -> Set[str]:
+        """
+        Find emails from a text
+
+        Args:
+            text: Text to remove emails from
+
+        Returns:
+            A set of email entities
+
+        """
+        mail_pattern = r"[\w\.-]+@[\w\.-]+(?:\.[\w]+)+"
+        emails = set(re.findall(mail_pattern, text))
+        return emails
 
 # Function to chunk text without overlap
 def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
@@ -85,13 +245,16 @@ def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
         input_ids_chunk = input_ids[i : i + max_length] # From 0 to 512, next is from 512 to 1024
         offset_mapping_chunk = offset_mapping[i : i + max_length]
         tokens_chunk = tokenizer.convert_ids_to_tokens(input_ids_chunk)
-        text_chunk = text[offset_mapping_chunk[0][0]:offset_mapping_chunk[-1][1]]
+        chunk_start_i = offset_mapping_chunk[0][0]
+        chunk_end_i = offset_mapping_chunk[-1][1]
+        text_chunk = text[chunk_start_i:chunk_end_i]
 
         if debug:
 
             print(f"Chunk {chunk_counter} tokens: {tokens_chunk}")
             print(f"Chunk {chunk_counter} text: {text_chunk}")
             print(f"Chunk {chunk_counter} offsets: {offset_mapping_chunk}")
+            print(f"Chunk {chunk_counter} start/end indeces: ({chunk_start_i}, {chunk_end_i})")
 
         chunks.append((input_ids_chunk, offset_mapping_chunk, tokens_chunk, text_chunk))
 
@@ -103,7 +266,7 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
 
     chunks = tokenize_and_chunk_text(text, tokenizer, debug)
 
-    all_entities = []
+    all_ents = []
     chunk_counter = 0
 
     for input_ids_chunk, offset_mapping_chunk, tokens_chunk, text_chunk in chunks:
@@ -111,27 +274,25 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
         if not input_ids_chunk: #Handles empty chunks
             continue
 
-        entities = ner_pipeline(text_chunk)
+        ents = ner_pipeline(text_chunk)
 
-        for entity in entities:
-            # Adjust entity positions based on chunk offset
-            if not chunk_counter == 0:
-                entity["start"] += offset_mapping_chunk[0][0] #+ chunk_start
-                entity["end"] += offset_mapping_chunk[0][0] #+ chunk_start
+        for ent in ents:
+            ent["start"] += offset_mapping_chunk[0][0] #+ chunk_start
+            ent["end"] += offset_mapping_chunk[0][0] #+ chunk_start
 
             if debug:
-                print(f"Chunk {chunk_counter} entity {entity["word"]} has span: {(entity["start"], entity["end"])}")
+                print(f"Chunk {chunk_counter} entity {ent["word"]} has span: {(ent["start"], ent["end"])}")
 
-        all_entities.extend(entities)
+        all_ents.extend(ents)
 
         chunk_counter += 1
 
-    return all_entities
+    return all_ents
 
 def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
     # Loop over each file
     for entry_dict in data_list:
-        
+
         text = entry_dict["data"]["text"]
 
         # Define the predictions_dict
@@ -145,9 +306,9 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
             continue
 
         # Get the NER-predictions
-        ner_results = process_long_text(text, tokenizer, ner_pipeline, debug)
+        all_ents = process_long_text(text, tokenizer, ner_pipeline, debug)
         
-        for result in ner_results:
+        for ent in all_ents:
 
             result_dict = {
                 "from_name": "entity_mentions",
@@ -161,15 +322,12 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
                 }
             }
 
-            # Change PER to PERSON
-            if result["entity_group"] == "PER":
-                result["entity_group"] = "PERSON"
 
             # Map the ner_result to the result_dict structure
-            result_dict["value"]["start"] = result["start"]
-            result_dict["value"]["end"] = result["end"]
-            result_dict["value"]["text"] = result["word"]
-            result_dict["value"]["labels"].append(result["entity_group"])
+            result_dict["value"]["start"] = ent["start"]
+            result_dict["value"]["end"] = ent["end"]
+            result_dict["value"]["text"] = ent["word"]
+            result_dict["value"]["labels"].append(ent["entity_group"])
 
             predictions_dict["result"].append(result_dict)
         
@@ -188,7 +346,7 @@ def save_json(data, save_path):
 
 def main():
     args = parse_arguments()
-    data_list = load_data(args.data_path, args.debug)
+    data_list = load_data(args.data_path, args.debug, args.test)
     ner_pipeline, tokenizer = initiate_ner_pipeline(args.model, args.debug)
     get_pre_annotations(data_list, args.model, ner_pipeline, tokenizer, args.debug)
     save_json(data_list, args.save_path)

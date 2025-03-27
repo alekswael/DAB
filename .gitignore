@@ -1,5 +1,7 @@
 # full datasets
 misc/
+packages_from_source/
+*.swp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
