@@ -4,6 +4,12 @@ import json
 import dacy
 import re
 
+'''
+This script contains a custom version of DaAnonymization,
+made with the purpose of getting the masked offsets for each entity,
+a function not currently supported in DaAnonymization. 
+'''
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="This script is used for generating masks for anonymization using the da_dacy_large_ner_fine_grained-0.1.0 model.")
     parser.add_argument(
@@ -17,7 +23,7 @@ def parse_arguments():
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the predictions.',
-        default="/home/aleksander/projects/DAB/data/predictions/DaCy_predictions.json",
+        default="/home/aleksander/projects/DAB/data/predictions/DaAnonymization_FG_predictions.json",
         required=False
     )
     parser.add_argument(
@@ -46,7 +52,7 @@ def dacy_pipeline(text, model):
     doc = model(text)
 
     masked_entities = []
-    offsets = []
+    dacy_offsets = []
 
     for ent in doc.ents:
 
@@ -54,15 +60,17 @@ def dacy_pipeline(text, model):
         offset = (ent.start_char, ent.end_char)
 
         masked_entities.append(masked_entity)
-        offsets.append(offset)
+        dacy_offsets.append(offset)
     
-    return masked_entities, offsets
+    dacy_offsets = sorted(dacy_offsets, key=lambda x: x[0], reverse=True)
+    
+    return masked_entities, dacy_offsets
 
-def mask_dacy_predictions(text, offsets):
+def mask_dacy_predictions(text, dacy_offsets):
     
     dacy_text = text
 
-    for start, end in offsets:
+    for start, end in dacy_offsets:
         if 0 <= start < end <= len(dacy_text):
             mask = '*' * (end - start)
             dacy_text = dacy_text[:start] + mask + dacy_text[end:]
@@ -71,7 +79,7 @@ def mask_dacy_predictions(text, offsets):
 
     return dacy_text
 
-def regex_pipeline(dacy_text):
+def regex_pipeline(text, dacy_text, dacy_offsets):
 
     cpr_pattern = "|".join(
         [
@@ -115,12 +123,19 @@ def regex_pipeline(dacy_text):
             regex_offset = (match.start(), match.end())
             regex_offsets.append(regex_offset)
     
-    return regex_offsets
+    all_offsets = regex_offsets + dacy_offsets
 
-def combine_offsets():
-    ## COMBINE DACY AND REGEX OFFSET LISTS!!
+    masked_text = text
 
-    ## PRINT THE FINAL MASK TO INSPECT!!
+    for start, end in all_offsets:
+        if 0 <= start < end <= len(masked_text):
+            mask = '*' * (end - start)
+            masked_text = masked_text[:start] + mask + masked_text[end:]
+        else:
+            raise ValueError(f"Invalid span: ({start}, {end}) for text of length {len(dacy_text)}")
+
+    
+    return all_offsets, masked_text
 
 def save_json(data, save_path):
 
@@ -138,11 +153,16 @@ def main():
 
     for entry_dict in data_list:
 
-        _, offsets = dacy_pipeline(entry_dict["data"]["text"], model)
+        text = entry_dict["data"]["text"]
 
-        masked_output_docs[entry_dict["id"]] = offsets
+        _, dacy_offsets = dacy_pipeline(text, model)
+        dacy_text = mask_dacy_predictions(text, dacy_offsets)
+        all_offsets, masked_text = regex_pipeline(text, dacy_text, dacy_offsets)
+
+        masked_output_docs[entry_dict["id"]] = all_offsets
 
         print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
+        print(f"[INFO]: Masked document: {masked_text}")
     
     save_json(masked_output_docs, args.save_path)
 

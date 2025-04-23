@@ -1,9 +1,8 @@
-import json, re, sys, abc, argparse, math
+import json, re, abc, argparse, math
 import numpy as np
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from tqdm import tqdm
-import pandas
 import spacy
 import intervaltree
 
@@ -18,7 +17,7 @@ def parse_arguments():
                         )
     parser.add_argument('--masked_output_file',
                         type=str,
-                        default="/home/aleksander/projects/DAB/data/predictions/DaCy_predictions.json",
+                        default="/home/aleksander/projects/DAB/data/predictions/DaAnonymization_predictions.json",
                         help='the path to the JSON file containing the actual spans masked by the system'
                         )
     parser.add_argument('--use_bert',
@@ -726,15 +725,21 @@ if __name__ == "__main__":
     token_precision = gold_corpus.get_precision(masked_docs, UniformTokenWeighting())
     mention_precision = gold_corpus.get_precision(masked_docs, UniformTokenWeighting(), False)  
 
-    print("==> Token-level recall on all identifiers: %.3f"%token_recall)
-    print("==> Token-level recall on all identifiers, factored by type:")
-    for ent_type, token_recall_for_ent_type in token_recall_by_type.items():
-        print("\t%s:%.3f"%(ent_type, token_recall_for_ent_type))
-    print("==> Mention-level recall on all identifiers: %.3f"%mention_recall)
-    print("==> Entity-level recall on direct identifiers: %.3f"%recall_direct_entities)
-    print("==> Entity-level recall on quasi identifiers: %.3f"%recall_quasi_entities)
-    print("==> Uniform token-level precision on all identifiers: %.3f"%token_precision)
-    print("==> Uniform mention-level precision on all identifiers: %.3f"%mention_precision)  
+    output = f'''
+    ==> Token-level recall on all identifiers: {token_recall:.3f}
+    ==> Token-level recall on all identifiers, factored by type:
+    KVASI: {token_recall_by_type["KVASI"]:.3f}
+    DIREKTE: {token_recall_by_type["DIREKTE"]:.3f}
+    ==> Mention-level recall on all identifiers: {mention_recall:.3f}
+    ==> Entity-level recall on direct identifiers: {recall_direct_entities:.3f}
+    ==> Entity-level recall on quasi identifiers: {recall_quasi_entities:.3f}
+    ==> Uniform token-level precision on all identifiers: {token_precision:.3f}
+    ==> Uniform mention-level precision on all identifiers: {mention_precision:.3f}
+    '''
+
+    print(output)
+
+    
                     
     if args.token_weighting == "uniform":
         weighting_scheme = UniformTokenWeighting()
