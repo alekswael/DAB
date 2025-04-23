@@ -34,6 +34,19 @@
                 "LOC"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 158,
+              "end": 166,
+              "text": "26355865",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -256,6 +269,32 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1198,
+              "end": 1209,
+              "text": "53 38 02 06",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1178,
+              "end": 1195,
+              "text": "annette@d\u00f8fler.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
           }
         ]
       }
@@ -372,6 +411,19 @@
               "text": "Knud Bay",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 489,
+              "end": 497,
+              "text": "86495614",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -901,6 +953,19 @@
             "to_name": "doc_text",
             "type": "labels",
             "value": {
+              "start": 36,
+              "end": 50,
+              "text": "rosa@larsen.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
               "start": 1573,
               "end": 1588,
               "text": "Hanne M. Larsen",
@@ -972,6 +1037,32 @@
               "text": "Stig Olsen",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 219,
+              "end": 230,
+              "text": "23 23 75 85",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 520,
+              "end": 531,
+              "text": "20 28 75 70",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -1077,6 +1168,32 @@
               "text": "Sif",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1053,
+              "end": 1064,
+              "text": "72 26 85 10",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1111,
+              "end": 1122,
+              "text": "72 26 85 11",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -1234,6 +1351,19 @@
               "text": "Merl\u00f8se",
               "labels": [
                 "LOC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 133,
+              "end": 141,
+              "text": "21943133",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -1406,6 +1536,32 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 109,
+              "end": 117,
+              "text": "75721103",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 118,
+              "end": 126,
+              "text": "30271937",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -1550,6 +1706,45 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 215,
+              "end": 223,
+              "text": "86848225",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 334,
+              "end": 342,
+              "text": "40253019",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 350,
+              "end": 358,
+              "text": "23476294",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -1666,6 +1861,19 @@
               "text": "Rikke",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 48,
+              "end": 59,
+              "text": "40 36 50 15",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -9475,6 +9683,19 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 112,
+              "end": 121,
+              "text": "2013 0021",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -9867,6 +10088,32 @@
                 "QUANTITY"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 135,
+              "end": 144,
+              "text": "2011 0044",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 496,
+              "end": 505,
+              "text": "2011 0044",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -10246,6 +10493,45 @@
                 "DATETIME"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 75,
+              "end": 84,
+              "text": "2020 0005",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 178,
+              "end": 187,
+              "text": "2020 0005",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1186,
+              "end": 1195,
+              "text": "2020 0005",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -10429,6 +10715,19 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 115,
+              "end": 124,
+              "text": "2015 0074",
+              "labels": [
+                "CODE"
+              ]
+            }
           }
         ]
       }
@@ -10571,6 +10870,32 @@
               "text": "Inge Estvan",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 84,
+              "end": 93,
+              "text": "2006 0020",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 222,
+              "end": 231,
+              "text": "2006 0020",
+              "labels": [
+                "CODE"
               ]
             }
           }
@@ -13640,6 +13965,71 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 742,
+              "end": 753,
+              "text": "010595-2323",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 744,
+              "end": 753,
+              "text": "0595-2323",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 886,
+              "end": 894,
+              "text": "41414241",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 768,
+              "end": 788,
+              "text": "kassyknud@hotmail.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 797,
+              "end": 815,
+              "text": "kas1313@post.au.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
           }
         ]
       }
@@ -13769,6 +14159,71 @@
               "text": "Svend",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 460,
+              "end": 471,
+              "text": "190496-3535",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 462,
+              "end": 471,
+              "text": "0496-3535",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 472,
+              "end": 481,
+              "text": "9940-9088",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 507,
+              "end": 515,
+              "text": "51112092",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 488,
+              "end": 506,
+              "text": "sm96hurtig@live.dk",
+              "labels": [
+                "MISC"
               ]
             }
           }
@@ -14032,6 +14487,84 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 20,
+              "end": 37,
+              "text": "lgmail@outlook.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 56,
+              "end": 76,
+              "text": "kimmeren@revision.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 410,
+              "end": 430,
+              "text": "kimmeren@revision.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 451,
+              "end": 468,
+              "text": "lgmail@outlook.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 966,
+              "end": 983,
+              "text": "lgmail@outlook.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 1002,
+              "end": 1022,
+              "text": "kimmeren@revision.dk",
+              "labels": [
+                "MISC"
+              ]
+            }
           }
         ]
       }
@@ -14215,6 +14748,71 @@
                 "PERSON"
               ]
             }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 381,
+              "end": 392,
+              "text": "121060-7890",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 383,
+              "end": 392,
+              "text": "1060-7890",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 472,
+              "end": 484,
+              "text": "+45 90111121",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 21,
+              "end": 43,
+              "text": "jesper.sorensen@nc.com",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 64,
+              "end": 88,
+              "text": "lars.mikkelsen@email.com",
+              "labels": [
+                "MISC"
+              ]
+            }
           }
         ]
       }
@@ -14344,6 +14942,32 @@
               "text": "Mads",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 24,
+              "end": 43,
+              "text": "mads.lund@email.com",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 67,
+              "end": 90,
+              "text": "kasper.jensen@email.com",
+              "labels": [
+                "MISC"
               ]
             }
           }
@@ -14514,6 +15138,45 @@
               "text": "SKAT",
               "labels": [
                 "ORG"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 128,
+              "end": 139,
+              "text": "300392-2188",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 130,
+              "end": 139,
+              "text": "0392-2188",
+              "labels": [
+                "CODE"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 230,
+              "end": 247,
+              "text": "youngps@gmail.com",
+              "labels": [
+                "MISC"
               ]
             }
           }
@@ -14710,6 +15373,32 @@
               "text": "Mette",
               "labels": [
                 "PERSON"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 19,
+              "end": 41,
+              "text": "mette.jensen@email.com",
+              "labels": [
+                "MISC"
+              ]
+            }
+          },
+          {
+            "from_name": "entity_mentions",
+            "to_name": "doc_text",
+            "type": "labels",
+            "value": {
+              "start": 58,
+              "end": 93,
+              "text": "anders.holm@danskesbank-support.com",
+              "labels": [
+                "MISC"
               ]
             }
           }

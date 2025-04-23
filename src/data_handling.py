@@ -56,6 +56,10 @@ def process_pdf(pdf_path):
         text = "\n".join([pytesseract.image_to_string(img) for img in images])
 
         return text
+    
+def remove_returns(text):
+    text = text.replace("\r\n", "\n")
+    return text
 
 def process_data(data_folder):
 
@@ -80,6 +84,8 @@ def process_data(data_folder):
             if file.endswith(".pdf"):
                 
                 text = process_pdf(file_path)
+            
+            text = remove_returns(text)
 
             data_dict = {
                 "text": "text",

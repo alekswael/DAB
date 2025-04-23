@@ -6,7 +6,7 @@ from transformers import pipeline, AutoTokenizer
 import dacy
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="This script is used for compiling the documents into a single JSON file, using the Label Studio format.")
+    parser = argparse.ArgumentParser(description="This script is used for generating the pre-annotations for the annotation pipeline with DaCy + ReGex.")
     parser.add_argument(
         '-d', '--data_path',
         type=str, 
@@ -48,7 +48,6 @@ def load_data(data_path, debug, test):
         data = json.load(doc)
 
         if test:
-
             test_file = "pvs_5.pdf"
 
             for entry_dict in data:
@@ -86,13 +85,17 @@ def initiate_ner_pipeline(ner_model, debug):
                 aggregation_strategy='first')
             
             ents = pipeline(text)
+            ner_spans = []
 
             for ent in ents:
 
                 if ent["entity_group"] == "PER":
                     ent["entity_group"] = "PERSON"
+                
+                ner_span = (ent["start"], ent["end"])
+                ner_spans.append(ner_span)
             
-            return ents
+            return ents, ner_spans
     
     if ner_model == "dacy":
 
@@ -102,13 +105,14 @@ def initiate_ner_pipeline(ner_model, debug):
             doc = nlp(text)
 
             ents = []
+            ner_spans = []
 
             for ent in doc.ents:
 
                 if ent.label_ == "PERSON": 
                     pass
 
-                elif ent.label_ in {"CODE", "CARDINAL"}: 
+                elif ent.label_ in {"CARDINAL"}: 
                     ent.label_ = "CODE"
 
                 elif ent.label_ in {"LOCATION", "FACILITY", "GPE"}:
@@ -129,22 +133,22 @@ def initiate_ner_pipeline(ner_model, debug):
                 elif ent.label_ in {"PRODUCT", "EVENT", "WORK OF ART", "LAW"}: 
                     ent.label_ = "MISC"
 
+                ner_span = (ent.start_char, ent.end_char)
+                ner_spans.append(ner_span)
+
                 ent = {
                     'entity_group': ent.label_,
                     'word': ent.text,
                     'start': ent.start_char,
                     'end': ent.end_char
                 }
-
                 ents.append(ent)
             
-            return ents
+            return ents, ner_spans
 
     return ner_pipeline, tokenizer
 
-def regex_pipeline(text):
-
-    ents = []
+def regex_pipeline(text, ner_spans):
 
     cpr_pattern = "|".join(
         [
@@ -171,20 +175,43 @@ def regex_pipeline(text):
 
     mail_pattern = r"[\w\.-]+@[\w\.-]+(?:\.[\w]+)+"
 
-    # Compile the regex pattern
-    regex_cpr = re.compile(cpr_pattern)
-    regex_tlf = re.compile(tlf_pattern)
-    regex_mail = re.compile(mail_pattern)
-    
-    # Find all matches in the text
-    matches_cpr = regex_cpr.finditer(text)
-    matches_tlf = regex_tlf.finditer(text)
-    matches_text = regex_mail.finditer(text)
-    
-    # Extract start and end indices for each match
-    indices = [(match.start(), match.end()) for match in matches]
-    
-    return indices
+    regex_patterns = [cpr_pattern, tlf_pattern, mail_pattern]
+
+    ents = []
+
+    for regex_pattern in regex_patterns:
+
+        # Compile the combined regex pattern
+        regex = re.compile(regex_pattern)
+        
+        # Find all matches in the text
+        matches = regex.finditer(text)
+
+        for match in matches:
+
+            regex_span = (match.start(), match.end())
+
+            if not any(ner_start <= regex_span[1] and regex_span[0] <= ner_end for ner_start, ner_end in ner_spans):
+
+                ent = {
+                    'entity_group': "label",
+                    'word': match.group(),
+                    'start': match.start(),
+                    'end': match.end()
+                }
+                
+                if regex_pattern == cpr_pattern:
+                    ent["entity_group"] = "CODE"
+                
+                elif regex_pattern == tlf_pattern:
+                    ent["entity_group"] = "CODE"
+                
+                elif regex_pattern == mail_pattern:
+                    ent["entity_group"] = "MISC"
+                
+                ents.append(ent)
+            
+    return ents
 
 # Function to chunk text without overlap
 def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
@@ -234,7 +261,13 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
         if not input_ids_chunk: #Handles empty chunks
             continue
 
-        ents = ner_pipeline(text_chunk)
+        ents, ner_spans = ner_pipeline(text_chunk)
+        regex_ents = regex_pipeline(text_chunk, ner_spans)
+        ents.extend(regex_ents)
+
+        if debug:
+            print(f"Regex ents: {regex_ents}")
+            print(f"Ents: {ents}")
 
         for ent in ents:
             ent["start"] += offset_mapping_chunk[0][0] #+ chunk_start
