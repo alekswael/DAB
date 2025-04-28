@@ -12,17 +12,17 @@ def parse_arguments():
 
     parser.add_argument('--gold_standard_file',
                         type=str,
-                        default="/home/aleksander/projects/DAB/data/annotations_15_04_2025.json",
+                        default="./data/annotations_15_04_2025.json",
                         help='the path to the JSON file containing the gold standard annotations'
                         )
     parser.add_argument('--masked_output_dir',
                         type=str,
-                        default="/home/aleksander/projects/DAB/data/predictions/",
+                        default="./data/predictions/",
                         help='the path to the directory containing JSON files with actual spans masked by the system'
                         )
     parser.add_argument('--benchmark_output_dir',
                         type=str,
-                        default="/home/aleksander/projects/DAB/model_benchmarks/",
+                        default="./model_benchmarks/",
                         help='The directory to save the benchmark results in'
                         )
     parser.add_argument('--model',
@@ -736,19 +736,19 @@ if __name__ == "__main__":
     mention_precision = gold_corpus.get_precision(masked_docs, UniformTokenWeighting(), False)  
 
     output = f'''==> Token-level recall on all identifiers: {token_recall:.3f}
-    ==> Token-level recall on all identifiers, factored by type:
+==> Token-level recall on all identifiers, factored by type:
     KVASI: {token_recall_by_type["KVASI"]:.3f}
     DIREKTE: {token_recall_by_type["DIREKTE"]:.3f}
-    ==> Mention-level recall on all identifiers: {mention_recall:.3f}
-    ==> Entity-level recall on direct identifiers: {recall_direct_entities:.3f}
-    ==> Entity-level recall on quasi identifiers: {recall_quasi_entities:.3f}
-    ==> Uniform token-level precision on all identifiers: {token_precision:.3f}
-    ==> Uniform mention-level precision on all identifiers: {mention_precision:.3f}
-    '''
+==> Mention-level recall on all identifiers: {mention_recall:.3f}
+==> Entity-level recall on direct identifiers: {recall_direct_entities:.3f}
+==> Entity-level recall on quasi identifiers: {recall_quasi_entities:.3f}
+==> Uniform token-level precision on all identifiers: {token_precision:.3f}
+==> Uniform mention-level precision on all identifiers: {mention_precision:.3f}
+'''
 
     print(output)
 
-    with open(f'{args.benchmark_output_dir}{args.model}_benchmark.txt', 'w', encoding='utf-8') as f:
+    with open(f'{args.benchmark_output_dir}{args.model}_benchmark_result.txt', 'w', encoding='utf-8') as f:
         f.write(output)
                     
     if args.token_weighting == "uniform":
@@ -766,4 +766,5 @@ if __name__ == "__main__":
         weighted_mention_precision = gold_corpus.get_precision(masked_docs, weighting_scheme, False)
         print("==> Weighted, token-level precision on all identifiers: %.3f"%weighted_token_precision)
         print("==> Weighted, mention-level precision on all identifiers: %.3f"%weighted_mention_precision)
-    
+
+        

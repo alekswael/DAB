@@ -12,19 +12,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="This script is used for generating masks for anonymization using the google/gemma-2-9b-it model.")
+    parser = argparse.ArgumentParser(description="This script is used for generating masks for anonymization using the google/gemma-3-12b-it model.")
     parser.add_argument(
         '-d', '--data_path',
         type=str, 
         help='The path to the annotated dataset in Label Studio JSON format.',
-        default='/home/aleksander/projects/DAB/data/annotations_15_04_2025.json',
+        default='./data/annotations_15_04_2025.json',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the predictions.',
-        default="/home/aleksander/projects/DAB/data/predictions/Gemma_predictions.json",
+        default="./data/predictions/Gemma_predictions.json",
         required=False
     )
     parser.add_argument(

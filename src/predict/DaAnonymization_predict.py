@@ -17,14 +17,14 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the annotated dataset in Label Studio JSON format.',
-        default='/home/aleksander/projects/DAB/data/annotations_15_04_2025.json',
+        default='./data/annotations_15_04_2025.json',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The directory for saving the predictions.',
-        default="/home/aleksander/projects/DAB/data/predictions/",
+        default="./data/predictions/",
         required=False
     )
     parser.add_argument(

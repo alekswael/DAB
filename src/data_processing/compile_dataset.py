@@ -12,14 +12,14 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the data folder, containing subfolders with .txt and/or .pdf files.',
-        default='/home/aleksander/projects/DAB/data/raw/',
+        default='./data/raw/',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the final JSON dataset.',
-        default="/home/aleksander/projects/DAB/data/DAB_dataset.json",
+        default="./data/DAB_dataset.json",
         required=False
     )
 

@@ -11,14 +11,14 @@ def parse_arguments():
         '-d', '--data_path',
         type=str, 
         help='The path to the dataset in Label Studio JSON format.',
-        default='/home/aleksander/projects/DAB/data/DAB_dataset.json',
+        default='./data/DAB_dataset.json',
         required=False
     )
     parser.add_argument(
         '-s', '--save_path', 
         type=str, 
         help='The path for saving the pre-annotated JSON dataset.',
-        default="/home/aleksander/projects/DAB/data/DAB_dataset_pre_annotated.json",
+        default="./data/DAB_dataset_pre_annotated.json",
         required=False
     )
     parser.add_argument(
