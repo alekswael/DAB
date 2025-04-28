@@ -1,0 +1,13 @@
+Argparse with relative paths
+bash scripts for running the code 
+README
+make sure requirements.txt file is Correct
+save masked texts from predictions to visualize in paper
+clean all code, comment(?)
+
+QUESTIONS FOR ROSS:
+Will i be evaluated on my code?
+How important is commented code?
+How important is congruency in code style? Sometimes objects, sometimes procedural
+Much of the main evaluation code is copied from the TAB repo - is this a problem? Should i rewrite it further?
+I use an open source model, but run it through Google's API.

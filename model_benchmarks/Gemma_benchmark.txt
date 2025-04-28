@@ -1,0 +1,10 @@
+==> Token-level recall on all identifiers: 0.364
+    ==> Token-level recall on all identifiers, factored by type:
+    KVASI: 0.227
+    DIREKTE: 0.611
+    ==> Mention-level recall on all identifiers: 0.197
+    ==> Entity-level recall on direct identifiers: 0.364
+    ==> Entity-level recall on quasi identifiers: 0.123
+    ==> Uniform token-level precision on all identifiers: 0.632
+    ==> Uniform mention-level precision on all identifiers: 0.315
+    

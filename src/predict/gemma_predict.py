@@ -1,8 +1,15 @@
 # Import
 import argparse
+import os
 import json
+import re
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from google import genai
 import torch
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="This script is used for generating masks for anonymization using the google/gemma-2-9b-it model.")
@@ -37,14 +44,55 @@ def load_data(data_path, debug):
     return data
 
 def instantiate_pipeline():
-    pipe = pipeline(
-        "text-generation",
-        model="google/gemma-2-9b-it",
-        model_kwargs={"torch_dtype": torch.bfloat16},
-        device="cpu",  # replace with "mps" to run on a Mac device
-    )
+    # pipe = pipeline(
+    #     "text-generation",
+    #     model="google/gemma-2-9b-it",
+    #     model_kwargs={"torch_dtype": torch.bfloat16},
+    #     device="cpu"
+    # )
+
+    pipe = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+    print("List of models that support generateContent:\n")
+    for m in pipe.models.list():
+        for action in m.supported_actions:
+            if action == "generateContent":
+                print(m.name)
 
     return pipe
+
+def process_gemma_output(text):
+    spans = []
+    new_text_parts = []
+    current_pos = 0
+    pattern = r"\[\[\[(.*?)\]\]\]"
+    last_end = 0
+
+    for match in re.finditer(pattern, text):
+        start, end = match.span()
+        inner_text = match.group(1)
+        
+        # Text before brackets
+        before = text[last_end:start]
+        new_text_parts.append(before)
+        current_pos += len(before)
+
+        # Replace inner text
+        modified = '*' * len(inner_text)
+        new_text_parts.append(modified)
+
+        # Save span
+        spans.append((current_pos, current_pos + len(modified)))
+
+        current_pos += len(modified)
+        last_end = end
+
+    # Add remaining text after last match
+    after = text[last_end:]
+    new_text_parts.append(after)
+
+    new_text = ''.join(new_text_parts)
+    return new_text, spans
 
 def gemma_pipeline(text, pipe):
 
@@ -73,16 +121,14 @@ def gemma_pipeline(text, pipe):
     
     '''
 
-    messages = [
-        {"role": "user", "content": prompt},
-    ]
+    gemma_output = pipe.models.generate_content(
+    model="gemma-3-12b-it",
+    contents=prompt,
+    )
 
-    outputs = pipe(messages, max_new_tokens=8192)
-    assistant_response = outputs[0]["generated_text"][-1]["content"].strip()
+    print(gemma_output.text)
 
-    print(assistant_response)
-
-    return masked_text, offsets
+    return gemma_output
 
 def save_json(data, save_path):
 
@@ -103,7 +149,10 @@ def main():
         text = entry_dict["data"]["text"]
 
         print(f"[INFO]: Generating mask for document {entry_dict["id"]}...")
-        masked_text, offsets = gemma_pipeline(text, pipe)
+
+        gemma_output = gemma_pipeline(text, pipe)
+
+        masked_text, offsets = process_gemma_output(gemma_output.text)
 
         masked_output_docs[entry_dict["id"]] = offsets
 

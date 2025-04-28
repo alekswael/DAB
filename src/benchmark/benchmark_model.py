@@ -15,10 +15,20 @@ def parse_arguments():
                         default="/home/aleksander/projects/DAB/data/annotations_15_04_2025.json",
                         help='the path to the JSON file containing the gold standard annotations'
                         )
-    parser.add_argument('--masked_output_file',
+    parser.add_argument('--masked_output_dir',
                         type=str,
-                        default="/home/aleksander/projects/DAB/data/predictions/DaAnonymization_predictions.json",
-                        help='the path to the JSON file containing the actual spans masked by the system'
+                        default="/home/aleksander/projects/DAB/data/predictions/",
+                        help='the path to the directory containing JSON files with actual spans masked by the system'
+                        )
+    parser.add_argument('--benchmark_output_dir',
+                        type=str,
+                        default="/home/aleksander/projects/DAB/model_benchmarks/",
+                        help='The directory to save the benchmark results in'
+                        )
+    parser.add_argument('--model',
+                        type=str,
+                        default="DaAnonymization",
+                        help='The model to be benchmarked - choose between DaAnonymization, DaAnonymization_FG, Gemma'
                         )
     parser.add_argument('--use_bert',
                         dest='token_weighting',
@@ -697,7 +707,7 @@ if __name__ == "__main__":
 
     print("=========")
 
-    masked_output_file = args.masked_output_file
+    masked_output_file = args.masked_output_dir + args.model + "_predictions.json"
 
     masked_docs = get_masked_docs_from_file(masked_output_file)
     
@@ -725,8 +735,7 @@ if __name__ == "__main__":
     token_precision = gold_corpus.get_precision(masked_docs, UniformTokenWeighting())
     mention_precision = gold_corpus.get_precision(masked_docs, UniformTokenWeighting(), False)  
 
-    output = f'''
-    ==> Token-level recall on all identifiers: {token_recall:.3f}
+    output = f'''==> Token-level recall on all identifiers: {token_recall:.3f}
     ==> Token-level recall on all identifiers, factored by type:
     KVASI: {token_recall_by_type["KVASI"]:.3f}
     DIREKTE: {token_recall_by_type["DIREKTE"]:.3f}
@@ -739,7 +748,8 @@ if __name__ == "__main__":
 
     print(output)
 
-    
+    with open(f'{args.benchmark_output_dir}{args.model}_benchmark.txt', 'w', encoding='utf-8') as f:
+        f.write(output)
                     
     if args.token_weighting == "uniform":
         weighting_scheme = UniformTokenWeighting()
