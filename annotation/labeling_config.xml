@@ -1,0 +1,118 @@
+<View style="display: flex; flexDirection: column">
+  
+  <View>
+    
+    <View>
+      <Header name="title" value="Annoter dokumentet for at anonymisere personer" style="text-align: center; margin-bottom: 40px" underline="true" size="2"/>
+    </View>
+    
+    <View>
+      <Header name="instructions" value="OBS: Annoteringsguiden kan findes ved at klikke på Instructions." style="text-align: center; margin-bottom: 40px" size="5"/>
+    </View>
+    
+  </View>
+  
+  <View>
+    
+    <View whenChoiceValue="Gå til trin 0: Gennemlæsning" style="text-align: center; margin-bottom: 40px">
+      <Header value="Trin 0: Gennemlæsning"/>
+      <Text name="step_0_intro" value="Læs hele dokumentet igennem."/>
+    </View>
+    
+    <View whenChoiceValue="Gå til trin 1: Tekstenheder" style="text-align: center; margin-bottom: 40px;">
+      <Header value="Trin 1: Tekstenheder"/>
+      <Text name="step_1_intro" value="Annoter tekstenheder i dokumentet ved at følge Trin 1 i annoteringsguiden." highlightColor="#000000"/>
+    </View>
+    
+    <View whenChoiceValue="Gå til trin 2: Maskering" style="text-align: center; margin-bottom: 40px">
+      <Header value="Trin 2: Maskering"/>
+      <Text name="step_2_intro" value="Vælg identifikator-type samt oplys fortrolig status for hver tekstenhed ved at følge Trin 2 i annoteringsguiden."/>
+    </View>
+    
+    <View whenChoiceValue="Gå til trin 3: Sidste gennemgang" style="text-align: center; margin-bottom: 40px">
+      <Header value="Trin 3: Sidste gennemgang"/>
+      <Text name="step_3_intro" value="Gennemgå dine annoteringer en sidste gang ved at følge Trin 3 i annoteringsguiden."/>
+    </View>
+    
+  </View>
+    
+  <View style="display: flex; flexDirection: row">
+    
+    <View style="width: 300px; padding: 1em; background: #f1f1f1; border-radius: 3px">
+      <Header value="Trin"/>
+      <Choices name="choose_step" toName="step_1_intro">
+        <Choice value="Gå til trin 0: Gennemlæsning" hotkey="none"/>
+        <Choice value="Gå til trin 1: Tekstenheder" hotkey="none"/>
+        <Choice value="Gå til trin 2: Maskering" hotkey="none"/>
+        <Choice value="Gå til trin 3: Sidste gennemgang" hotkey="none"/>
+      </Choices>
+    </View>
+    
+	<View visibleWhen="choice-selected" whenTagName="choose_step" whenChoiceValue="Gå til trin 0: Gennemlæsning" style="width: 900px; padding: 1em; border-radius: 3px;">
+      <Header value="Tekst"/>
+      <Text name="doc_text_step_0" value="$text" showLabels="false"/>
+    </View>
+      
+    <View visibleWhen="choice-selected" whenTagName="choose_step" whenChoiceValue="Gå til trin 1: Tekstenheder,Gå til trin 2: Maskering,Gå til trin 3: Sidste gennemgang" style="width: 900px; padding: 1em; background: #ffffff; border-radius: 3px">
+      <Header value="Tekst"/>
+      <Text name="doc_text" value="$text" showLabels="true"/>
+    </View>
+
+    <View visibleWhen="choice-selected" whenTagName="choose_step" whenChoiceValue="Gå til trin 1: Tekstenheder,Gå til trin 2: Maskering">
+      
+      <View style="width: 210px; padding: 1em; background: #f1f1f1; border-radius: 3px">
+		
+        <Labels name="entity_mentions" toName="doc_text" choice="single" showInline="false">
+        
+        <View whenChoiceValue="Gå til trin 1: Tekstenheder">
+          <Header value="Semantiske kategorier"/>
+          <Label value="PERSON" background="red" hotkey="1"/>
+          <Label value="CODE" background="blue" hotkey="2"/>
+          <Label value="LOC" background="purple" hotkey="3"/>
+          <Label value="ORG" background="cyan" hotkey="4"/>
+          <Label value="DEM" background="pink" hotkey="5"/>
+          <Label value="DATETIME" background="yellow" hotkey="6"/>
+          <Label value="QUANTITY" background="brown" hotkey="7"/>
+          <Label value="MISC" background="green" hotkey="8"/>
+        </View>
+          
+        <View whenChoiceValue="Gå til trin 2: Maskering">
+          <Header value="Identifikator-type"/>
+          <Label value="DIREKTE" background="#000000" hotkey="D"/>
+          <Label value="KVASI" background="#8b8b8b" hotkey="K"/>
+          
+          <Header value="Fortrolig status"/>
+          <View visibleWhen="no-region-selected">
+          	<Text name="no_region_confidential" value="Vælg en tekstenhed"/>
+          </View>
+          
+          <Choices name="confidential_status" toName="doc_text" choice="single" perRegion="true" required="false">
+            <Choice value="BELIEF" hotkey="none"/>
+            <Choice value="POLITICS" hotkey="none"/>
+            <Choice value="SEX" hotkey="none"/>
+            <Choice value="ETHNIC" hotkey="*"/>
+            <Choice value="HEALTH" hotkey="none"/>
+          </Choices>
+          
+      	</View>
+
+        </Labels>
+      
+      <style>
+        .htx-highlight[data-label*="DIREKTE"] {
+        background-color: #000000 !important;
+        color: #000000 !important;
+        }
+        .htx-highlight[data-label*="KVASI"] {
+        background-color: #8b8b8b !important;
+        color: #8b8b8b !important;
+        }
+      </style>
+
+      </View>
+      
+    </View>
+    
+  </View>
+  
+</View>

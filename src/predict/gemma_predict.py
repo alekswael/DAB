@@ -11,37 +11,41 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="This script is used for generating masks for anonymization using the google/gemma-3-12b-it model.")
-    parser.add_argument(
-        '-d', '--data_path',
-        type=str, 
-        help='The path to the annotated dataset in Label Studio JSON format.',
-        default='./data/annotations_15_04_2025.json',
-        required=False
+    parser = argparse.ArgumentParser(
+        description="This script is used for generating masks for anonymization using the google/gemma-3-12b-it model."
     )
     parser.add_argument(
-        '-s', '--save_path', 
-        type=str, 
-        help='The path for saving the predictions.',
+        "-d",
+        "--data_path",
+        type=str,
+        help="The path to the annotated dataset in Label Studio JSON format.",
+        default="./data/annotations_15_04_2025.json",
+        required=False,
+    )
+    parser.add_argument(
+        "-s",
+        "--save_path",
+        type=str,
+        help="The path for saving the predictions.",
         default="./data/predictions/Gemma_predictions.json",
-        required=False
+        required=False,
     )
     parser.add_argument(
-        '-db', '--debug', 
-        action="store_true", 
-        help='Set to debug mode.',
-        required=False
+        "-db", "--debug", action="store_true", help="Set to debug mode.", required=False
     )
 
     return parser.parse_args()
+
 
 def load_data(data_path, debug):
 
     with open(data_path, "r", encoding="utf-8") as doc:
         data = json.load(doc)
-    
+
     return data
+
 
 def instantiate_pipeline():
     # pipe = pipeline(
@@ -61,6 +65,7 @@ def instantiate_pipeline():
 
     return pipe
 
+
 def process_gemma_output(text):
     spans = []
     new_text_parts = []
@@ -71,14 +76,14 @@ def process_gemma_output(text):
     for match in re.finditer(pattern, text):
         start, end = match.span()
         inner_text = match.group(1)
-        
+
         # Text before brackets
         before = text[last_end:start]
         new_text_parts.append(before)
         current_pos += len(before)
 
         # Replace inner text
-        modified = '*' * len(inner_text)
+        modified = "*" * len(inner_text)
         new_text_parts.append(modified)
 
         # Save span
@@ -91,12 +96,13 @@ def process_gemma_output(text):
     after = text[last_end:]
     new_text_parts.append(after)
 
-    new_text = ''.join(new_text_parts)
+    new_text = "".join(new_text_parts)
     return new_text, spans
+
 
 def gemma_pipeline(text, pipe):
 
-    prompt = f'''Instruction:
+    prompt = f"""Instruction:
 
     You are a GDPR text anonymization assistant. Your job is to anonymize Danish text by masking character spans containing personal information, as to ensure that none of the people mentioned in the text can be directly or indirectly identified. You should disregard the notion of publicly available knowledge and consider all direct and indirect identifiers as personal information. To mask a character span in the text, mark it in triple hard brackets.
 
@@ -119,16 +125,17 @@ def gemma_pipeline(text, pipe):
     Output:
 
     
-    '''
+    """
 
     gemma_output = pipe.models.generate_content(
-    model="gemma-3-12b-it",
-    contents=prompt,
+        model="gemma-3-12b-it",
+        contents=prompt,
     )
 
     print(gemma_output.text)
 
     return gemma_output
+
 
 def save_json(data, save_path):
 
@@ -136,6 +143,7 @@ def save_json(data, save_path):
 
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
+
 
 def main():
     args = parse_arguments()
@@ -158,8 +166,9 @@ def main():
 
         print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
         print(f"[INFO]: Masked document: {masked_text}")
-    
+
     save_json(masked_output_docs, args.save_path)
+
 
 if __name__ == "__main__":
     main()
