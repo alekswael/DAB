@@ -42,7 +42,7 @@ def load_data(data_path, debug):
 
 def add_entity_ids(data_list):
 
-    # Loop through all entities per document and ad to a set
+    # Loop through all entities per document and add to a set
 
     # Per doc
     for entry_dict in data_list:

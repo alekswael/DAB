@@ -7,7 +7,3 @@
 ==> Entity-level recall on quasi identifiers: 0.390
 ==> Uniform token-level precision on all identifiers: 0.841
 ==> Uniform mention-level precision on all identifiers: 0.796
-
-Weighting scheme: bert
-==> Weighted, token-level precision on all identifiers: 0.844
-==> Weighted, mention-level precision on all identifiers: 0.796

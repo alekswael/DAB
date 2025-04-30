@@ -14,7 +14,7 @@ import intervaltree
 def parse_arguments():
 
     parser = argparse.ArgumentParser(
-        description="Computes evaluation metrics for text anonymisation"
+        description="Computes evaluation metrics for the Danish Text Anonymisation benchmark."
     )
 
     parser.add_argument(
@@ -47,7 +47,7 @@ def parse_arguments():
         action="store_const",
         const="bert",
         default="uniform",
-        help="use BERT to compute the information content of each content (default: disable weighting)",
+        help="use DanskBERT to compute the information content of each content (default: disable weighting)",
     )
     parser.add_argument(
         "--only_docs",
@@ -75,6 +75,185 @@ POS_TO_IGNORE = {"ADP", "PART", "CCONJ", "DET"}
 TOKENS_TO_IGNORE = {"hr", "fru", "nr"}
 CHARACTERS_TO_IGNORE = " ,.-;:/&()[]–'\" ’“”"
 
+class TokenWeighting:
+    """Abstract class for token weighting schemes (used to compute the precision)"""
+
+    @abc.abstractmethod
+    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
+        """Given a text and a list of text spans, returns a list of numeric weights
+        (of same length as the list of spans) representing the information content
+        conveyed by each span.
+
+        A weight close to 0 represents a span with low information content (i.e. which
+        can be easily predicted from the remaining context), while a weight close to 1
+        represents a high information content (which is difficult to predict from the
+        context)"""
+
+        return
+
+
+class UniformTokenWeighting(TokenWeighting):
+    """Uniform weighting (all tokens assigned to a weight of 1.0)"""
+
+    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
+        return [1.0] * len(text_spans)
+
+
+class BertTokenWeighting(TokenWeighting):
+    """Token weighting based on a BERT language model. The weighting mechanism
+    runs the BERT model on a text in which the provided spans are masked. The
+    weight of each token is then defined as 1-(probability of the actual token value).
+
+    In other words, a token that is difficult to predict will have a high
+    information content, and therefore a high weight, whereas a token which can
+    be predicted from its content will received a low weight."""
+
+    def __init__(self, max_segment_size=100):
+        """Initialises the BERT tokenizers and masked language model"""
+
+        from transformers import BertTokenizerFast, BertForMaskedLM
+
+        self.tokeniser = BertTokenizerFast.from_pretrained("bert-base-uncased")
+
+        import torch
+
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.model = BertForMaskedLM.from_pretrained("bert-base-uncased")
+        self.model = self.model.to(self.device)
+
+        self.max_segment_size = max_segment_size
+
+    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
+        """Returns a list of numeric weights between 0 and 1, where each value
+        corresponds to 1 - (probability of predicting the value of the text span
+        according to the BERT model).
+
+        If the span corresponds to several BERT tokens, the probability is the
+        product of the probabilities for each token."""
+
+        import torch
+
+        # STEP 1: we tokenise the text
+        bert_tokens = self.tokeniser(text, return_offsets_mapping=True)
+        input_ids = bert_tokens["input_ids"]
+        input_ids_copy = np.array(input_ids)
+
+        # STEP 2: we record the mapping between spans and BERT tokens
+        bert_token_spans = bert_tokens["offset_mapping"]
+        tokens_by_span = self._get_tokens_by_span(bert_token_spans, text_spans)
+
+        # STEP 3: we mask the tokens that we wish to predict
+        attention_mask = bert_tokens["attention_mask"]
+        for token_indices in tokens_by_span.values():
+            for token_idx in token_indices:
+                attention_mask[token_idx] = 0
+                input_ids[token_idx] = self.tokeniser.mask_token_id
+
+        # STEP 4: we run the masked language model
+        logits = self._get_model_predictions(input_ids, attention_mask)
+        unnorm_probs = torch.exp(logits)
+        probs = unnorm_probs / torch.sum(unnorm_probs, axis=1)[:, None]
+
+        # We are only interested in the probs for the actual token values
+        probs_actual = probs[torch.arange(len(input_ids)), input_ids_copy]
+        probs_actual = probs_actual.detach().cpu().numpy()
+
+        # STEP 5: we compute the weights from those predictions
+        weights = []
+        for span_start, span_end in text_spans:
+
+            # If the span does not include any actual token, skip
+            if not tokens_by_span[(span_start, span_end)]:
+                weights.append(0)
+                continue
+
+            # if the span has several tokens, we take the minimum prob
+            prob = np.min(
+                [
+                    probs_actual[token_idx]
+                    for token_idx in tokens_by_span[(span_start, span_end)]
+                ]
+            )
+
+            # We finally define the weight as -log(p)
+            weights.append(-np.log(prob))
+
+        return weights
+
+    def _get_tokens_by_span(self, bert_token_spans, text_spans):
+        """Given two lists of spans (one with the spans of the BERT tokens, and one with
+        the text spans to weight), returns a dictionary where each text span is associated
+        with the indices of the BERT tokens it corresponds to."""
+
+        # We create an interval tree to facilitate the mapping
+        text_spans_tree = intervaltree.IntervalTree()
+        for start, end in text_spans:
+            text_spans_tree[start:end] = True
+
+        # We create the actual mapping between spans and tokens
+        tokens_by_span = {span: [] for span in text_spans}
+        for token_idx, (start, end) in enumerate(bert_token_spans):
+            for span_start, span_end, _ in text_spans_tree[start:end]:
+                tokens_by_span[(span_start, span_end)].append(token_idx)
+
+        # And control that everything is correct
+        for span_start, span_end in text_spans:
+            if len(tokens_by_span[(span_start, span_end)]) == 0:
+                print(
+                    f"[WARNING]: span ({span_start},{span_end}) without any token"
+                )
+        return tokens_by_span
+
+    def _get_model_predictions(self, input_ids, attention_mask):
+        """Given tokenised input identifiers and an associated attention mask (where the
+        tokens to predict have a mask value set to 0), runs the BERT language and returns
+        the (unnormalised) prediction scores for each token.
+
+        If the input length is longer than max_segment size, we split the document in
+        small segments, and then concatenate the model predictions for each segment."""
+
+        import torch
+
+        nb_tokens = len(input_ids)
+
+        input_ids = torch.tensor(input_ids)[None, :].to(self.device)
+        attention_mask = torch.tensor(attention_mask)[None, :].to(self.device)
+
+        # If the number of tokens is too large, we split in segments
+        if nb_tokens > self.max_segment_size:
+            nb_segments = math.ceil(nb_tokens / self.max_segment_size)
+
+            # Split the input_ids (and add padding if necessary)
+            split_pos = [
+                self.max_segment_size * (i + 1) for i in range(nb_segments - 1)
+            ]
+            input_ids_splits = torch.tensor_split(input_ids[0], split_pos)
+
+            input_ids = torch.nn.utils.rnn.pad_sequence(
+                input_ids_splits, batch_first=True
+            )
+
+            # Split the attention masks
+            attention_mask_splits = torch.tensor_split(attention_mask[0], split_pos)
+            attention_mask = torch.nn.utils.rnn.pad_sequence(
+                attention_mask_splits, batch_first=True
+            )
+
+        # Run the model on the tokenised inputs + attention mask
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+        # And get the resulting prediction scores
+        scores = outputs.logits
+
+        # If the batch contains several segments, concatenate the result
+        if len(scores) > 1:
+            scores = torch.vstack([scores[i] for i in range(len(scores))])
+            scores = scores[:nb_tokens]
+        else:
+            scores = scores[0]
+
+        return scores
+
 
 class MaskedDocument:
     """Represents a document in which some text spans are masked, each span
@@ -92,23 +271,6 @@ class MaskedDocument:
                 i for start, end in self.masked_spans for i in range(start, end)
             }
         return self.masked_offsets
-
-
-class TokenWeighting:
-    """Abstract class for token weighting schemes (used to compute the precision)"""
-
-    @abc.abstractmethod
-    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
-        """Given a text and a list of text spans, returns a list of numeric weights
-        (of same length as the list of spans) representing the information content
-        conveyed by each span.
-
-        A weight close to 0 represents a span with low information content (i.e. which
-        can be easily predicted from the remaining context), while a weight close to 1
-        represents a high information content (which is difficult to predict from the
-        context)"""
-
-        return
 
 
 class AnnotatedEntity:
@@ -136,6 +298,10 @@ class AnnotatedEntity:
             for i, mention in enumerate(self.mentions)
             if self.mention_level_masking[i]
         ]
+    
+    def __repr__(self):
+        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        return f"{self.__class__.__name__}({attrs})"
 
 
 class GoldCorpus:
@@ -143,18 +309,18 @@ class GoldCorpus:
     JSON file."""
 
     def __init__(self, gold_standard_json_file: str, spacy_model="da_core_news_trf"):
+        
+        # Dict of GoldDocuments
+        self.documents: Dict[str, GoldDocument] = {}
 
         # Loading the spacy model
         nlp = spacy.load(spacy_model)
-
-        # documents indexed by identifier
-        self.documents = {}
 
         # gold_standard_json_file is the annotated dataset
         fd = open(gold_standard_json_file, encoding="utf-8")
         data_list = json.load(fd)
         fd.close()
-        print(f"Reading annotated corpus with {len(data_list)} documents")
+        print(f"[INFO]: Reading annotated corpus with {len(data_list)} documents")
 
         # Check format of data
         if type(data_list) != list:
@@ -187,6 +353,12 @@ class GoldCorpus:
             )
 
             self.documents[entry_dict["id"]] = new_doc
+        
+    def __str__(self):
+        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        return f"{self.__class__.__name__}({attrs})"
+
+    ### Functions for calculating eval metrics ###
 
     def get_entity_recall(
         self, masked_docs: List[MaskedDocument], include_direct=True, include_quasi=True
@@ -412,6 +584,7 @@ class GoldCorpus:
 
                 # We extract the annotators that have also masked this token/span
                 annotators = gold_doc.get_annotators_for_span(start, end)
+                #print(f"[INFO]: Number of annotators in the corpus: {annotators}")
 
                 # And update the (weighted) counts
                 weighted_true_positives += len(annotators) * weight
@@ -446,7 +619,7 @@ class GoldDocument:
         for annotation_dict in annotations:
 
             if "result" not in annotation_dict:
-                raise RuntimeError("Annotations must include result")
+                raise RuntimeError("Annotations must include result list")
 
             for entity in self._get_entities_from_mentions(annotation_dict["result"]):
 
@@ -469,9 +642,9 @@ class GoldDocument:
 
             if result_dict["type"] == "labels":  # Exclude the relation_dicts
 
-                if result_dict["value"]["labels"][0] in ["DIREKTE", "KVASI"]:
+                if result_dict["value"]["labels"][0] in ["DIREKTE", "KVASI"]: # Only include labels which are identifiers
 
-                    for key in ["id", "value"]:
+                    for key in ["entity_id", "value"]:
 
                         if key not in result_dict:
                             raise RuntimeError(
@@ -522,7 +695,7 @@ class GoldDocument:
         for entity in entities.values():
             if set(entity.mention_level_masking) != {entity.need_masking}:
                 entity.need_masking = True
-                print(f"Warning: inconsistent masking of entity {entity.entity_id}: {entity.mention_level_masking}")
+                print(f"[WARNING]: Inconsistent masking of entity {entity.entity_id}: {entity.mention_level_masking}")
 
         return list(entities.values())
 
@@ -623,169 +796,9 @@ class GoldDocument:
             end_token = start + match.end(0)
             yield start_token, end_token
 
-
-class UniformTokenWeighting(TokenWeighting):
-    """Uniform weighting (all tokens assigned to a weight of 1.0)"""
-
-    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
-        return [1.0] * len(text_spans)
-
-
-class BertTokenWeighting(TokenWeighting):
-    """Token weighting based on a BERT language model. The weighting mechanism
-    runs the BERT model on a text in which the provided spans are masked. The
-    weight of each token is then defined as 1-(probability of the actual token value).
-
-    In other words, a token that is difficult to predict will have a high
-    information content, and therefore a high weight, whereas a token which can
-    be predicted from its content will received a low weight."""
-
-    def __init__(self, max_segment_size=100):
-        """Initialises the BERT tokenizers and masked language model"""
-
-        from transformers import BertTokenizerFast, BertForMaskedLM
-
-        self.tokeniser = BertTokenizerFast.from_pretrained("bert-base-uncased")
-
-        import torch
-
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = BertForMaskedLM.from_pretrained("bert-base-uncased")
-        self.model = self.model.to(self.device)
-
-        self.max_segment_size = max_segment_size
-
-    def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
-        """Returns a list of numeric weights between 0 and 1, where each value
-        corresponds to 1 - (probability of predicting the value of the text span
-        according to the BERT model).
-
-        If the span corresponds to several BERT tokens, the probability is the
-        product of the probabilities for each token."""
-
-        import torch
-
-        # STEP 1: we tokenise the text
-        bert_tokens = self.tokeniser(text, return_offsets_mapping=True)
-        input_ids = bert_tokens["input_ids"]
-        input_ids_copy = np.array(input_ids)
-
-        # STEP 2: we record the mapping between spans and BERT tokens
-        bert_token_spans = bert_tokens["offset_mapping"]
-        tokens_by_span = self._get_tokens_by_span(bert_token_spans, text_spans)
-
-        # STEP 3: we mask the tokens that we wish to predict
-        attention_mask = bert_tokens["attention_mask"]
-        for token_indices in tokens_by_span.values():
-            for token_idx in token_indices:
-                attention_mask[token_idx] = 0
-                input_ids[token_idx] = self.tokeniser.mask_token_id
-
-        # STEP 4: we run the masked language model
-        logits = self._get_model_predictions(input_ids, attention_mask)
-        unnorm_probs = torch.exp(logits)
-        probs = unnorm_probs / torch.sum(unnorm_probs, axis=1)[:, None]
-
-        # We are only interested in the probs for the actual token values
-        probs_actual = probs[torch.arange(len(input_ids)), input_ids_copy]
-        probs_actual = probs_actual.detach().cpu().numpy()
-
-        # STEP 5: we compute the weights from those predictions
-        weights = []
-        for span_start, span_end in text_spans:
-
-            # If the span does not include any actual token, skip
-            if not tokens_by_span[(span_start, span_end)]:
-                weights.append(0)
-                continue
-
-            # if the span has several tokens, we take the minimum prob
-            prob = np.min(
-                [
-                    probs_actual[token_idx]
-                    for token_idx in tokens_by_span[(span_start, span_end)]
-                ]
-            )
-
-            # We finally define the weight as -log(p)
-            weights.append(-np.log(prob))
-
-        return weights
-
-    def _get_tokens_by_span(self, bert_token_spans, text_spans):
-        """Given two lists of spans (one with the spans of the BERT tokens, and one with
-        the text spans to weight), returns a dictionary where each text span is associated
-        with the indices of the BERT tokens it corresponds to."""
-
-        # We create an interval tree to facilitate the mapping
-        text_spans_tree = intervaltree.IntervalTree()
-        for start, end in text_spans:
-            text_spans_tree[start:end] = True
-
-        # We create the actual mapping between spans and tokens
-        tokens_by_span = {span: [] for span in text_spans}
-        for token_idx, (start, end) in enumerate(bert_token_spans):
-            for span_start, span_end, _ in text_spans_tree[start:end]:
-                tokens_by_span[(span_start, span_end)].append(token_idx)
-
-        # And control that everything is correct
-        for span_start, span_end in text_spans:
-            if len(tokens_by_span[(span_start, span_end)]) == 0:
-                print(
-                    f"Warning: span ({span_start},{span_end}) without any token"
-                )
-        return tokens_by_span
-
-    def _get_model_predictions(self, input_ids, attention_mask):
-        """Given tokenised input identifiers and an associated attention mask (where the
-        tokens to predict have a mask value set to 0), runs the BERT language and returns
-        the (unnormalised) prediction scores for each token.
-
-        If the input length is longer than max_segment size, we split the document in
-        small segments, and then concatenate the model predictions for each segment."""
-
-        import torch
-
-        nb_tokens = len(input_ids)
-
-        input_ids = torch.tensor(input_ids)[None, :].to(self.device)
-        attention_mask = torch.tensor(attention_mask)[None, :].to(self.device)
-
-        # If the number of tokens is too large, we split in segments
-        if nb_tokens > self.max_segment_size:
-            nb_segments = math.ceil(nb_tokens / self.max_segment_size)
-
-            # Split the input_ids (and add padding if necessary)
-            split_pos = [
-                self.max_segment_size * (i + 1) for i in range(nb_segments - 1)
-            ]
-            input_ids_splits = torch.tensor_split(input_ids[0], split_pos)
-
-            input_ids = torch.nn.utils.rnn.pad_sequence(
-                input_ids_splits, batch_first=True
-            )
-
-            # Split the attention masks
-            attention_mask_splits = torch.tensor_split(attention_mask[0], split_pos)
-            attention_mask = torch.nn.utils.rnn.pad_sequence(
-                attention_mask_splits, batch_first=True
-            )
-
-        # Run the model on the tokenised inputs + attention mask
-        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-
-        # And get the resulting prediction scores
-        scores = outputs.logits
-
-        # If the batch contains several segments, concatenate the result
-        if len(scores) > 1:
-            scores = torch.vstack([scores[i] for i in range(len(scores))])
-            scores = scores[:nb_tokens]
-        else:
-            scores = scores[0]
-
-        return scores
-
+    def __repr__(self):
+        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        return f"{self.__class__.__name__}({attrs})"
 
 def get_masked_docs_from_file(masked_output_file: str):
     """Given a file path for a JSON file containing the spans to be masked for
@@ -828,6 +841,8 @@ if __name__ == "__main__":
 
     gold_corpus = GoldCorpus(args.gold_standard_file)
 
+    print(gold_corpus)
+
     masked_output_file = args.masked_output_dir + args.model + "_predictions.json"
 
     masked_docs = get_masked_docs_from_file(masked_output_file)
@@ -849,7 +864,7 @@ if __name__ == "__main__":
         gold_corpus.show_false_negatives(masked_docs, True, True)
 
     print(
-        f"Computing evaluation metrics for {masked_output_file} ({len(masked_docs)} documents)"
+        f"[INFO]: Computing evaluation metrics for {masked_output_file} ({len(masked_docs)} documents)"
     )
 
     token_recall = gold_corpus.get_recall(masked_docs, True, True, True)
