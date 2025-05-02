@@ -353,6 +353,13 @@ class GoldCorpus:
             )
 
             self.documents[entry_dict["id"]] = new_doc
+
+            self.corpus_unique_annotators = set()
+
+            for doc in self.documents.values():
+
+                self.corpus_unique_annotators.update(doc.doc_unique_annotators)
+
         
     def __str__(self):
         attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
@@ -616,6 +623,8 @@ class GoldDocument:
         # Annotated entities (indexed by id)
         self.entities = {}
 
+        self.doc_unique_annotators = set()
+
         for annotation_dict in annotations:
 
             if "result" not in annotation_dict:
@@ -632,6 +641,9 @@ class GoldDocument:
                 entity.annotator = annotation_dict["completed_by"]
                 entity.doc_id = doc_id
                 self.entities[entity.entity_id] = entity
+
+                self.doc_unique_annotators.add(entity.annotator)
+
 
     def _get_entities_from_mentions(self, annotation_result_dicts):
         """Returns a set of entities based on the annotated mentions"""
@@ -841,8 +853,6 @@ if __name__ == "__main__":
 
     gold_corpus = GoldCorpus(args.gold_standard_file)
 
-    print(gold_corpus)
-
     masked_output_file = args.masked_output_dir + args.model + "_predictions.json"
 
     masked_docs = get_masked_docs_from_file(masked_output_file)
@@ -865,6 +875,9 @@ if __name__ == "__main__":
 
     print(
         f"[INFO]: Computing evaluation metrics for {masked_output_file} ({len(masked_docs)} documents)"
+    )
+    print(
+        f"[INFO]: Number of unique annotators in corpus: {len(gold_corpus.corpus_unique_annotators)}, annotator IDs: {gold_corpus.corpus_unique_annotators}"
     )
 
     token_recall = gold_corpus.get_recall(masked_docs, True, True, True)
