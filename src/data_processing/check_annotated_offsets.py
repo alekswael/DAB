@@ -8,70 +8,75 @@ def parse_arguments():
         description="This script is used for checking the offsets of the annotated masks after exporting from Label Studio."
     )
     parser.add_argument(
-        "-d",
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
         default="./data/annotations_15_04_2025.json",
         required=False,
     )
-    parser.add_argument(
-        "-db", "--debug", action="store_true", help="Set to debug mode.", required=False
-    )
 
     return parser.parse_args()
 
 
-def load_data(data_path, debug):
+def load_data(data_path):
     with open(data_path, "r", encoding="utf-8") as doc:
-        data = json.load(doc)
+        data_list = json.load(doc)
 
-        if debug:
-            print(f"Data: {json.dumps(data, indent = 2)}")
-            print(data[0]["annotations"][0]["result"][0]["value"]["text"])
-
-    return data
+    return data_list
 
 
-def get_masked_text(data, index=20):
+def get_masked_text(data_list):
 
-    text = data[index]["data"]["text"]
+    # Per doc
+    for entry_dict in data_list:
 
-    masked_entities = []
-    offsets = []
+        # Per annotation / annotator
+        for annotation_dict in entry_dict["annotations"]:
 
-    for result_dict in data[index]["annotations"][0]["result"]:
+            text = entry_dict["data"]["text"]
+            masked_entities = []
+            offsets = []
 
-        if result_dict["type"] == "labels":
+            # Per entity
+            for result_dict in annotation_dict["result"]:
 
-            masked_entity = result_dict["value"]["text"]
-            offset = (result_dict["value"]["start"], result_dict["value"]["end"])
+                if result_dict["type"] == "labels":
 
-            masked_entities.append(masked_entity)
-            offsets.append(offset)
+                    if result_dict["value"]["labels"][0] in ["DIREKTE", "KVASI"]:
 
-    offsets = sorted(offsets, key=lambda x: x[0], reverse=True)
+                        masked_entity = result_dict["value"]["text"]
+                        offset = (
+                            result_dict["value"]["start"],
+                            result_dict["value"]["end"],
+                        )
 
-    masked_text = text
+                        masked_entities.append(masked_entity)
+                        offsets.append(offset)
 
-    for start, end in offsets:
-        if 0 <= start < end <= len(masked_text):
-            mask = "*" * (end - start)
-            masked_text = masked_text[:start] + mask + masked_text[end:]
-        else:
-            raise ValueError(
-                f"Invalid span: ({start}, {end}) for text of length {len(masked_text)}"
+            offsets = sorted(offsets, key=lambda x: x[0], reverse=True)
+
+            masked_text = text
+
+            for start, end in offsets:
+                if 0 <= start < end <= len(masked_text):
+                    mask = "*" * (end - start)
+                    masked_text = masked_text[:start] + mask + masked_text[end:]
+                else:
+                    raise ValueError(
+                        f"Invalid span: ({start}, {end}) for text of length {len(masked_text)}"
+                    )
+
+            print(
+                f"Document ID: {entry_dict["id"]}\nOriginal text:\n{text}\nMasked text:\n{masked_text}"
             )
 
-    return text, masked_text
+    return None
 
 
 def main():
     args = parse_arguments()
-    data = load_data(args.data_path, args.debug)
-    text, masked_text = get_masked_text(data)
-
-    print(f"ORIGINAL TEXT: {text} \n MASKED TEXT: {masked_text}")
+    data_list = load_data(args.data_path)
+    get_masked_text(data_list)
 
 
 if __name__ == "__main__":

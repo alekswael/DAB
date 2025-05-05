@@ -11,7 +11,6 @@ def parse_arguments():
         description="This script is used for generating the pre-annotations for the annotation pipeline with DaCy + ReGex."
     )
     parser.add_argument(
-        "-d",
         "--data_path",
         type=str,
         help="The path to the dataset in Label Studio JSON format.",
@@ -19,7 +18,6 @@ def parse_arguments():
         required=False,
     )
     parser.add_argument(
-        "-s",
         "--save_path",
         type=str,
         help="The path for saving the pre-annotated JSON dataset.",
@@ -27,42 +25,25 @@ def parse_arguments():
         required=False,
     )
     parser.add_argument(
-        "-m",
         "--model",
         type=str,
         help="The NER-model used for generating pre-annotations.",
         default="dacy",
         required=False,
     )
-    parser.add_argument(
-        "-db", "--debug", action="store_true", help="Set to debug mode.", required=False
-    )
-    parser.add_argument(
-        "-t", "--test", action="store_true", help="Set to test mode.", required=False
-    )
+    parser.add_argument("--verbose", action="store_true", default=True)
 
     return parser.parse_args()
 
 
-def load_data(data_path, debug, test):
+def load_data(data_path):
     with open(data_path, "r", encoding="utf-8") as doc:
-        data = json.load(doc)
+        data_list = json.load(doc)
 
-        if test:
-            test_file = "pvs_5.pdf"
-
-            for entry_dict in data:
-                if entry_dict["data"]["file_name"] == test_file:
-                    data = [entry_dict]
-                    break
-
-        if debug:
-            print(f"Data: {data}")
-
-    return data
+    return data_list
 
 
-def initiate_ner_pipeline(ner_model, debug):
+def initiate_ner_pipeline(ner_model, verbose):
     """Initiate NER-pipeline. Im using ScandiNER."""
     print(f"[INFO]: Initiating {ner_model} model...")
 
@@ -73,9 +54,9 @@ def initiate_ner_pipeline(ner_model, debug):
         truncation=False,
     )
 
-    if debug:
-        print(tokenizer.init_kwargs)
-        print(tokenizer)
+    if verbose:
+        print(f"Tokenizer init parameters: {tokenizer.init_kwargs}")
+        print(f"Tokenizer: {tokenizer}")
 
     if ner_model == "scandi_ner":
 
@@ -220,7 +201,7 @@ def regex_pipeline(text, ner_spans):
 
 
 # Function to chunk text without overlap
-def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
+def tokenize_and_chunk_text(text, tokenizer, verbose, max_length=512):
     # Tokenize
     tokens = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
 
@@ -244,7 +225,7 @@ def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
         chunk_end_i = offset_mapping_chunk[-1][1]
         text_chunk = text[chunk_start_i:chunk_end_i]
 
-        if debug:
+        if verbose:
 
             print(f"Chunk {chunk_counter} tokens: {tokens_chunk}")
             print(f"Chunk {chunk_counter} text: {text_chunk}")
@@ -260,9 +241,9 @@ def tokenize_and_chunk_text(text, tokenizer, debug, max_length=512):
     return chunks
 
 
-def process_long_text(text, tokenizer, ner_pipeline, debug):
+def process_long_text(text, tokenizer, ner_pipeline, verbose):
 
-    chunks = tokenize_and_chunk_text(text, tokenizer, debug)
+    chunks = tokenize_and_chunk_text(text, tokenizer, verbose)
 
     all_ents = []
     chunk_counter = 0
@@ -276,15 +257,11 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
         regex_ents = regex_pipeline(text_chunk, ner_spans)
         ents.extend(regex_ents)
 
-        if debug:
-            print(f"Regex ents: {regex_ents}")
-            print(f"Ents: {ents}")
-
         for ent in ents:
-            ent["start"] += offset_mapping_chunk[0][0]  # + chunk_start
-            ent["end"] += offset_mapping_chunk[0][0]  # + chunk_start
+            ent["start"] += offset_mapping_chunk[0][0]
+            ent["end"] += offset_mapping_chunk[0][0]
 
-            if debug:
+            if verbose:
                 print(
                     f"Chunk {chunk_counter} entity {ent["word"]} has span: {(ent["start"], ent["end"])}"
                 )
@@ -296,7 +273,7 @@ def process_long_text(text, tokenizer, ner_pipeline, debug):
     return all_ents
 
 
-def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
+def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, verbose):
     # Loop over each file
     for entry_dict in data_list:
 
@@ -313,7 +290,7 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
             continue
 
         # Get the NER-predictions
-        all_ents = process_long_text(text, tokenizer, ner_pipeline, debug)
+        all_ents = process_long_text(text, tokenizer, ner_pipeline, verbose)
 
         for ent in all_ents:
 
@@ -339,14 +316,16 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, debug):
 
         entry_dict["predictions"].append(predictions_dict)
 
-        print(f"Done pre-annotating document: {entry_dict["data"]["file_name"]}")
+        print(
+            f"[INFO]: Done pre-annotating document: {entry_dict["data"]["file_name"]}"
+        )
 
     return data_list
 
 
-def save_json(data, save_path):
+def save_json(data_list, save_path):
 
-    json_object = json.dumps(data, indent=2)
+    json_object = json.dumps(data_list, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
@@ -354,9 +333,9 @@ def save_json(data, save_path):
 
 def main():
     args = parse_arguments()
-    data_list = load_data(args.data_path, args.debug, args.test)
-    ner_pipeline, tokenizer = initiate_ner_pipeline(args.model, args.debug)
-    get_pre_annotations(data_list, args.model, ner_pipeline, tokenizer, args.debug)
+    data_list = load_data(args.data_path)
+    ner_pipeline, tokenizer = initiate_ner_pipeline(args.model, args.verbose)
+    get_pre_annotations(data_list, args.model, ner_pipeline, tokenizer, args.verbose)
     save_json(data_list, args.save_path)
 
 

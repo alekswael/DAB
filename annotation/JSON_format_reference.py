@@ -39,17 +39,17 @@ prediction_result_dict = {  # contains a single marked entity
         "start": int,  # start offset for entity
         "end": int,  # end offset for entity
         "text": str,  # entity
-        "labels": ["LABEL"],  # insert label, e.g. 'PER'
+        "labels": ["LABEL"],  # insert labels, e.g. 'PER'
     },
 }
 
 ##### Format of output (annotated) data #####
 
-data_list = []  # insert entry_dict(s)
+data_list = [entry_dict1, entry_dict2, ...]  # insert entry_dict(s)
 
 entry_dict = {
-    "id": int, # document ID
-    "annotations": [ # list of annotations
+    "id": int,  # document ID
+    "annotations": [  # list of annotations
         annotation_dict1,
         annotation_dict2,
         ...,
@@ -75,9 +75,9 @@ entry_dict = {
 
 annotation_dict = {
     "id": int,
-    "completed_by": int, # annotator ID
+    "completed_by": int,  # annotator ID
     "result": [
-        annotation_result_dict1, # dict per entity
+        annotation_result_dict1,  # dict per entity
         annotation_result_dict2,
         ...,
     ],  # insert annotation_result_dict(s)
@@ -117,7 +117,7 @@ annotation_result_dict = {
     "to_name": str,
     "type": str,
     "origin": str,  # what action was made, either change in pre-annotation or manual annotation
-    "entity_id": int # unique ID for this entity, BUT differs per annotator!
+    "entity_id": int,  # unique ID for this entity, BUT differs per annotator!
 }
 
 data_dict = {

@@ -12,15 +12,13 @@ def parse_arguments():
         description="This script is used for compiling the documents into a single JSON file, using the Label Studio format."
     )
     parser.add_argument(
-        "-d",
-        "--data_path",
+        "--data_dir",
         type=str,
         help="The path to the data folder, containing subfolders with .txt and/or .pdf files.",
         default="./data/raw/",
         required=False,
     )
     parser.add_argument(
-        "-s",
         "--save_path",
         type=str,
         help="The path for saving the final JSON dataset.",
@@ -31,8 +29,9 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def is_digitally_born(pdf_path):
+def is_pdf_readable(pdf_path):
     """Check if a PDF contains selectable text."""
+
     doc = PdfReader(pdf_path)
     pages = doc.pages
     text = ""
@@ -43,10 +42,8 @@ def is_digitally_born(pdf_path):
 
 def process_pdf(pdf_path):
     """Process the PDF based on whether it contains text or is scanned."""
-    if is_digitally_born(pdf_path):
 
-        # print(f"{pdf_path}: Digitally born - Extracting text with PdfReader")
-
+    if is_pdf_readable(pdf_path):
         doc = PdfReader(pdf_path)
         pages = doc.pages
         text = ""
@@ -56,9 +53,6 @@ def process_pdf(pdf_path):
         return text
 
     else:
-
-        # print(f"{pdf_path}: Scanned PDF - Applying OCR")
-
         images = convert_from_path(pdf_path)  # Convert PDF pages to images
         text = "\n".join([pytesseract.image_to_string(img) for img in images])
 

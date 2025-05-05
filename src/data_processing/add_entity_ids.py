@@ -8,7 +8,6 @@ def parse_arguments():
         description="This script is used for adding unique entity IDs to the annotations."
     )
     parser.add_argument(
-        "-d",
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
@@ -16,28 +15,20 @@ def parse_arguments():
         required=False,
     )
     parser.add_argument(
-        "-s",
         "--save_path",
         type=str,
         help="The path for saving the pre-annotated JSON dataset. If None, overwrites the data_path JSON file.",
         required=False,
     )
-    parser.add_argument(
-        "-db", "--debug", action="store_true", help="Set to debug mode.", required=False
-    )
 
     return parser.parse_args()
 
 
-def load_data(data_path, debug):
+def load_data(data_path):
     with open(data_path, "r", encoding="utf-8") as doc:
-        data = json.load(doc)
+        data_list = json.load(doc)
 
-        if debug:
-            print(f"Data: {json.dumps(data, indent = 2)}")
-            print(data[0]["annotations"][0]["result"][0]["value"]["text"])
-
-    return data
+    return data_list
 
 
 def add_entity_ids(data_list):
@@ -47,7 +38,7 @@ def add_entity_ids(data_list):
     # Per doc
     for entry_dict in data_list:
 
-        id_map_entry =+ 0 # ensure unique IDs per annotator
+        id_map_entry = +0  # ensure unique IDs per annotator
 
         # Per annotation / annotator
         for annotation_dict in entry_dict["annotations"]:
@@ -69,9 +60,11 @@ def add_entity_ids(data_list):
 
                 if result_dict["type"] == "labels":
 
-                    result_dict["entity_id"] = id_map[result_dict["value"]["text"]] + id_map_entry
-            
-            id_map_entry =+ len(id_map)
+                    result_dict["entity_id"] = (
+                        id_map[result_dict["value"]["text"]] + id_map_entry
+                    )
+
+            id_map_entry = +len(id_map)
 
     return data_list
 
@@ -83,14 +76,12 @@ def id_from_relation(data_list):
         for annotation_dict in entry_dict["annotations"]:
 
             result_dicts = annotation_dict["result"]
-            
+
             label_dicts = [d for d in result_dicts if d["type"] == "labels"]
             relation_dicts = [d for d in result_dicts if d["type"] == "relation"]
 
             # Build a lookup: label_id → entity_id
-            label_id_to_entity_id = {
-                d["id"]: d["entity_id"] for d in label_dicts
-            }
+            label_id_to_entity_id = {d["id"]: d["entity_id"] for d in label_dicts}
 
             for relation_dict in relation_dicts:
                 from_id = relation_dict["from_id"]
@@ -112,9 +103,9 @@ def id_from_relation(data_list):
     return data_list
 
 
-def save_json(data, save_path):
+def save_json(data_list, save_path):
 
-    json_object = json.dumps(data, indent=2)
+    json_object = json.dumps(data_list, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
@@ -126,10 +117,10 @@ def main():
     if args.save_path is None:
         args.save_path = args.data_path
 
-    data = load_data(args.data_path, args.debug)
-    data = add_entity_ids(data)
-    data = id_from_relation(data)
-    save_json(data, args.save_path)
+    data_list = load_data(args.data_path)
+    data_list = add_entity_ids(data_list)
+    data_list = id_from_relation(data_list)
+    save_json(data_list, args.save_path)
 
 
 if __name__ == "__main__":

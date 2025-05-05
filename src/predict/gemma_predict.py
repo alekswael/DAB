@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
 
 
 def parse_arguments():
@@ -17,7 +18,6 @@ def parse_arguments():
         description="This script is used for generating masks for anonymization using the google/gemma-3-12b-it model."
     )
     parser.add_argument(
-        "-d",
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
@@ -25,43 +25,44 @@ def parse_arguments():
         required=False,
     )
     parser.add_argument(
-        "-s",
         "--save_path",
         type=str,
         help="The path for saving the predictions.",
-        default="./data/predictions/Gemma_predictions.json",
+        default="./output/predictions/Gemma_predictions.json",
         required=False,
     )
     parser.add_argument(
-        "-db", "--debug", action="store_true", help="Set to debug mode.", required=False
+        "--cloud",
+        action="store_true",
+        help="If True, the model will be run through Google's API using a free-tier key (as of May 5th, 2025).",
+        default=True,
     )
 
     return parser.parse_args()
 
 
-def load_data(data_path, debug):
+def load_data(data_path):
 
     with open(data_path, "r", encoding="utf-8") as doc:
-        data = json.load(doc)
+        data_list = json.load(doc)
 
-    return data
+    return data_list
 
 
-def instantiate_pipeline():
-    # pipe = pipeline(
-    #     "text-generation",
-    #     model="google/gemma-2-9b-it",
-    #     model_kwargs={"torch_dtype": torch.bfloat16},
-    #     device="cpu"
-    # )
+def instantiate_pipeline(cloud):
 
-    pipe = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    if cloud == True:
+        print(f"[INFO]: Running model through Google's API...")
+        pipe = genai.Client(api_key=api_key)
 
-    print("List of models that support generateContent:\n")
-    for m in pipe.models.list():
-        for action in m.supported_actions:
-            if action == "generateContent":
-                print(m.name)
+    else:
+        print(f"[INFO]: Running model locally...")
+        pipe = pipeline(
+            "text-generation",
+            model="google/gemma-3-12b-it",
+            model_kwargs={"torch_dtype": torch.bfloat16},
+            device="cpu",
+        )
 
     return pipe
 
@@ -100,46 +101,92 @@ def process_gemma_output(text):
     return new_text, spans
 
 
-def gemma_pipeline(text, pipe):
+def generate_output(text, pipe, cloud):
 
-    prompt = f"""Instruction:
+    if cloud == True:
 
-    You are a GDPR text anonymization assistant. Your job is to anonymize Danish text by masking character spans containing personal information, as to ensure that none of the people mentioned in the text can be directly or indirectly identified. You should disregard the notion of publicly available knowledge and consider all direct and indirect identifiers as personal information. To mask a character span in the text, mark it in triple hard brackets.
+        prompt = f"""Instruction:
 
-    Here is an example:
+You are a GDPR text anonymization assistant. Your job is to anonymize Danish text by masking character spans containing personal information, as to ensure that none of the people mentioned in the text can be directly or indirectly identified. You should disregard the notion of publicly available knowledge and consider all direct and indirect identifiers as personal information. To mask a character span in the text, mark it in triple hard brackets.
 
-    Text:
+Here is an example:
 
-    Du kan prøve at ringe til Mogens Petersen, han har tlf nr 80 90 31 23. Han driver en barbershop og selv i centrum af Hillerød.
+Text:
 
-    Output:
+Du kan prøve at ringe til Mogens Petersen, han har tlf nr 80 90 31 23. Han driver en barbershop og bor selv i centrum af Hillerød.
 
-    Du kan prøve at ringe til [[[Mogens Petersen]]], han har tlf nr [[[80 90 31 23]]]. Han ejer en [[[barbershop]]] og selv i [[[centrum af Hillerød]]].
+Output:
 
-    Now it's your turn.
+Du kan prøve at ringe til [[[Mogens Petersen]]], han har tlf nr [[[80 90 31 23]]]. Han ejer en [[[barbershop]]] og bor selv i [[[centrum af Hillerød]]].
 
-    Text:
+Now it's your turn.
 
-    {text}
+Text:
 
-    Output:
+{text}
 
-    
-    """
-
-    gemma_output = pipe.models.generate_content(
-        model="gemma-3-12b-it",
-        contents=prompt,
-    )
-
-    print(gemma_output.text)
-
-    return gemma_output
+Output:
 
 
-def save_json(data, save_path):
+"""
 
-    json_object = json.dumps(data, indent=2)
+        output = pipe.models.generate_content(
+            model="gemma-3-12b-it",
+            contents=prompt,
+        )
+
+        print(output.text)
+
+        return output.text
+
+    else:
+
+        instruction_prompt = f"""Instruction:
+
+You are a GDPR text anonymization assistant. Your job is to anonymize Danish text by masking character spans containing personal information, as to ensure that none of the people mentioned in the text can be directly or indirectly identified. You should disregard the notion of publicly available knowledge and consider all direct and indirect identifiers as personal information. To mask a character span in the text, mark it in triple hard brackets.
+
+Here is an example:
+
+Text:
+
+Du kan prøve at ringe til Mogens Petersen, han har tlf nr 80 90 31 23. Han driver en barbershop og bor selv i centrum af Hillerød.
+
+Output:
+
+Du kan prøve at ringe til [[[Mogens Petersen]]], han har tlf nr [[[80 90 31 23]]]. Han ejer en [[[barbershop]]] og bor selv i [[[centrum af Hillerød]]].
+
+Now it's your turn.
+
+"""
+
+        user_prompt = f"""Text:
+
+{text}
+
+Output:
+
+
+"""
+
+        messages = [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": instruction_prompt}],
+            },
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
+        ]
+
+        output = pipe(text=messages)
+        output_text = output[0]["generated_text"][-1]["content"]
+
+        print(output_text)
+
+        return output_text
+
+
+def save_json(data_list, save_path):
+
+    json_object = json.dumps(data_list, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
@@ -147,10 +194,11 @@ def save_json(data, save_path):
 
 def main():
     args = parse_arguments()
-    data_list = load_data(args.data_path, args.debug)
-    pipe = instantiate_pipeline()
+    data_list = load_data(args.data_path)
+    pipe = instantiate_pipeline(args.cloud)
 
-    masked_output_docs = {}
+    masked_offsets = {}
+    masked_text = {}
 
     for entry_dict in data_list:
 
@@ -158,16 +206,19 @@ def main():
 
         print(f"[INFO]: Generating mask for document {entry_dict["id"]}...")
 
-        gemma_output = gemma_pipeline(text, pipe)
+        output_text = generate_output(text, pipe, args.cloud)
 
-        masked_text, offsets = process_gemma_output(gemma_output.text)
+        all_masked_text, all_offsets = process_gemma_output(output_text)
 
-        masked_output_docs[entry_dict["id"]] = offsets
+        masked_offsets[entry_dict["id"]] = all_offsets
+        masked_text[entry_dict["id"]] = all_masked_text
+
+        output_format = [masked_offsets, masked_text]
 
         print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
         print(f"[INFO]: Masked document: {masked_text}")
 
-    save_json(masked_output_docs, args.save_path)
+    save_json(output_format, args.save_path)
 
 
 if __name__ == "__main__":

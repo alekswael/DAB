@@ -42,16 +42,13 @@ def parse_arguments():
         help="The model to be benchmarked - choose between DaAnonymization, DaAnonymization_FG, Gemma",
     )
     parser.add_argument(
-        "--use_bert",
-        dest="token_weighting",
-        action="store_const",
-        const="bert",
-        default="uniform",
-        help="use DanskBERT to compute the information content of each content (default: disable weighting)",
+        "--bert_weighting",
+        action="store_true",
+        default=True,
+        help="Whether to calculate DanskBERT-weighted precision in addition to uniform.",
     )
     parser.add_argument(
         "--only_docs",
-        dest="only_docs",
         default=None,
         nargs="*",
         help="list of document identifiers on which to focus the evaluation "
@@ -59,7 +56,6 @@ def parse_arguments():
     )
     parser.add_argument(
         "--verbose",
-        dest="verbose",
         action="store_true",
         default=False,
         help="provides detailed evaluation results (defaults to false)",
@@ -74,6 +70,7 @@ def parse_arguments():
 POS_TO_IGNORE = {"ADP", "PART", "CCONJ", "DET"}
 TOKENS_TO_IGNORE = {"hr", "fru", "nr"}
 CHARACTERS_TO_IGNORE = " ,.-;:/&()[]–'\" ’“”"
+
 
 class TokenWeighting:
     """Abstract class for token weighting schemes (used to compute the precision)"""
@@ -199,9 +196,7 @@ class BertTokenWeighting(TokenWeighting):
         # And control that everything is correct
         for span_start, span_end in text_spans:
             if len(tokens_by_span[(span_start, span_end)]) == 0:
-                print(
-                    f"[WARNING]: span ({span_start},{span_end}) without any token"
-                )
+                print(f"[WARNING]: span ({span_start},{span_end}) without any token")
         return tokens_by_span
 
     def _get_model_predictions(self, input_ids, attention_mask):
@@ -278,8 +273,15 @@ class AnnotatedEntity:
     a list of mentions (character-level spans in the document), whether it
     needs to be masked, and whether it corresponds to a direct identifier"""
 
-    def __init__(self, entity_id: str, mentions: List[Tuple[int, int]], need_masking: bool,
-                 is_direct: bool, entity_type: str, mention_level_masking: List[bool]):
+    def __init__(
+        self,
+        entity_id: str,
+        mentions: List[Tuple[int, int]],
+        need_masking: bool,
+        is_direct: bool,
+        entity_type: str,
+        mention_level_masking: List[bool],
+    ):
         self.entity_id = entity_id
         self.mentions = mentions
         self.need_masking = need_masking
@@ -298,9 +300,9 @@ class AnnotatedEntity:
             for i, mention in enumerate(self.mentions)
             if self.mention_level_masking[i]
         ]
-    
+
     def __repr__(self):
-        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        attrs = ", ".join(f"{key}={value!r}" for key, value in self.__dict__.items())
         return f"{self.__class__.__name__}({attrs})"
 
 
@@ -309,7 +311,7 @@ class GoldCorpus:
     JSON file."""
 
     def __init__(self, gold_standard_json_file: str, spacy_model="da_core_news_trf"):
-        
+
         # Dict of GoldDocuments
         self.documents: Dict[str, GoldDocument] = {}
 
@@ -324,22 +326,22 @@ class GoldCorpus:
 
         # Check format of data
         if type(data_list) != list:
-            raise RuntimeError("JSON file should be a list of annotated documents following the basic Label Studio JSON format.")
+            raise RuntimeError(
+                "JSON file should be a list of annotated documents following the basic Label Studio JSON format."
+            )
 
         for entry_dict in data_list:
             for key in ["id", "data", "annotations"]:
                 if key not in entry_dict:
                     raise RuntimeError(
                         f"Annotated document is not well formed: missing variable {key}"
-                        )
-
+                    )
 
             for key in ["text", "source_dataset", "file_name"]:
                 if key not in entry_dict["data"]:
                     raise RuntimeError(
                         f"Annotated document is not well formed: missing variable {key}"
-                        )
-
+                    )
 
             # Parsing the document with spacy
             spacy_doc = nlp(entry_dict["data"]["text"])
@@ -360,9 +362,8 @@ class GoldCorpus:
 
                 self.corpus_unique_annotators.update(doc.doc_unique_annotators)
 
-        
     def __str__(self):
-        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        attrs = ", ".join(f"{key}={value!r}" for key, value in self.__dict__.items())
         return f"{self.__class__.__name__}({attrs})"
 
     ### Functions for calculating eval metrics ###
@@ -591,7 +592,7 @@ class GoldCorpus:
 
                 # We extract the annotators that have also masked this token/span
                 annotators = gold_doc.get_annotators_for_span(start, end)
-                #print(f"[INFO]: Number of annotators in the corpus: {annotators}")
+                # print(f"[INFO]: Number of annotators in the corpus: {annotators}")
 
                 # And update the (weighted) counts
                 weighted_true_positives += len(annotators) * weight
@@ -644,7 +645,6 @@ class GoldDocument:
 
                 self.doc_unique_annotators.add(entity.annotator)
 
-
     def _get_entities_from_mentions(self, annotation_result_dicts):
         """Returns a set of entities based on the annotated mentions"""
 
@@ -654,7 +654,10 @@ class GoldDocument:
 
             if result_dict["type"] == "labels":  # Exclude the relation_dicts
 
-                if result_dict["value"]["labels"][0] in ["DIREKTE", "KVASI"]: # Only include labels which are identifiers
+                if result_dict["value"]["labels"][0] in [
+                    "DIREKTE",
+                    "KVASI",
+                ]:  # Only include labels which are identifiers
 
                     for key in ["entity_id", "value"]:
 
@@ -707,7 +710,9 @@ class GoldDocument:
         for entity in entities.values():
             if set(entity.mention_level_masking) != {entity.need_masking}:
                 entity.need_masking = True
-                print(f"[WARNING]: Inconsistent masking of entity {entity.entity_id}: {entity.mention_level_masking}")
+                print(
+                    f"[WARNING]: Inconsistent masking of entity {entity.entity_id}: {entity.mention_level_masking}"
+                )
 
         return list(entities.values())
 
@@ -809,8 +814,9 @@ class GoldDocument:
             yield start_token, end_token
 
     def __repr__(self):
-        attrs = ', '.join(f"{key}={value!r}" for key, value in self.__dict__.items())
+        attrs = ", ".join(f"{key}={value!r}" for key, value in self.__dict__.items())
         return f"{self.__class__.__name__}({attrs})"
+
 
 def get_masked_docs_from_file(masked_output_file: str):
     """Given a file path for a JSON file containing the spans to be masked for
@@ -820,11 +826,14 @@ def get_masked_docs_from_file(masked_output_file: str):
     masked_output_docs = json.load(fd)
     fd.close()
 
+    # Remove masked_texts
+    masked_output_docs = masked_output_docs[0]
+
     if type(masked_output_docs) != dict:
         raise RuntimeError(
-    f"{masked_output_file} must contain a mapping between document identifiers" +
-    " and lists of masked spans in this document"
-    )
+            f"{masked_output_file} must contain a mapping between document identifiers"
+            + " and lists of masked spans in this document"
+        )
 
     masked_docs = []
 
@@ -903,30 +912,19 @@ if __name__ == "__main__":
 ==> Uniform mention-level precision on all identifiers: {mention_precision:.3f}
 """
 
-    if args.token_weighting == "uniform":
-        weighting_scheme = UniformTokenWeighting()
+    if args.bert_weighting:
 
-    elif args.token_weighting == "bert":
-        weighting_scheme = BertTokenWeighting()
-
-    else:
-        raise RuntimeError("Unrecognised weighting scheme:", args.token_weighting)
-
-    if not type(weighting_scheme) == UniformTokenWeighting:
         weighted_token_precision = gold_corpus.get_precision(
-            masked_docs, weighting_scheme
+            masked_docs, BertTokenWeighting()
         )
         weighted_mention_precision = gold_corpus.get_precision(
-            masked_docs, weighting_scheme, False
+            masked_docs, BertTokenWeighting(), False
         )
 
-        weighted_output=f"""
-Weighting scheme: {args.token_weighting}
-==> Weighted, token-level precision on all identifiers: {weighted_token_precision:.3f}
-==> Weighted, mention-level precision on all identifiers: {weighted_mention_precision:.3f}
+        weighted_output = f"""==> DanskBERT-weighted, token-level precision on all identifiers: {weighted_token_precision:.3f}
+==> DanskBERT-weighted, mention-level precision on all identifiers: {weighted_mention_precision:.3f}
 """
         output += weighted_output
-    
 
     # Print benchmark result
     print(output)

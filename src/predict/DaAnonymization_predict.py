@@ -17,7 +17,6 @@ def parse_arguments():
         description="This script is used for generating masks for anonymization using DaCy models."
     )
     parser.add_argument(
-        "-d",
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
@@ -25,15 +24,13 @@ def parse_arguments():
         required=False,
     )
     parser.add_argument(
-        "-s",
         "--save_path",
         type=str,
         help="The directory for saving the predictions.",
-        default="./data/predictions/",
+        default="./output/predictions/",
         required=False,
     )
     parser.add_argument(
-        "-fg",
         "--fine_grained",
         action="store_true",
         help="Whether to use the fine-grained NER DaCy model.",
@@ -238,7 +235,8 @@ def main():
     data_list = load_data(args.data_path)
     tokenizer, model = instantiate_model(args.fine_grained)
 
-    masked_output_docs = {}
+    masked_offsets = {}
+    masked_text = {}
 
     for entry_dict in data_list:
 
@@ -248,12 +246,15 @@ def main():
 
         all_offsets, all_masked_text = pipeline_to_chunks(chunks, model)
 
-        masked_output_docs[entry_dict["id"]] = all_offsets
+        masked_offsets[entry_dict["id"]] = all_offsets
+        masked_text[entry_dict["id"]] = all_masked_text
+
+        output_format = [masked_offsets, masked_text]
 
         print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
         print(f"[INFO]: Masked document: {all_masked_text}")
 
-    save_json(masked_output_docs, args.save_path, args.fine_grained)
+    save_json(output_format, args.save_path, args.fine_grained)
 
 
 if __name__ == "__main__":

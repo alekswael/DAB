@@ -34,4 +34,3 @@ $PYTHON -m spacy download da_core_news_trf
 
 # Deactivate the virtual environment
 deactivate
-echo "Virtual environment deactivated."
