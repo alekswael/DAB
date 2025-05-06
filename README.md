@@ -70,25 +70,18 @@ DAB/
 
 ---
 
-## Setup
+## 🔧 Setup
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/alekswael/DAB
    cd DAB
    ```
 
-2. Create and activate a virtual environment:
+2. Run `setup.sh`:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   bash setup.sh
    ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
 ---
 
 ## Usage
@@ -130,13 +123,6 @@ python src/benchmark/benchmark_model.py \
   --benchmark_output_dir ./output/benchmarks/ \
   --model DaAnonymization
 ```
-
-See the full [setup.sh](scripts/setup.sh), or run:
-
-```bash
-bash scripts/setup.sh
-```
-
 ---
 
 ## Annotation Guidelines
