@@ -17,8 +17,6 @@ The current version (1.0) consists of 54 manually annotated (anonymized) documen
   - [Benchmarking](#benchmarking)
 - [Annotation Guidelines](#annotation-guidelines)
 
----
-
 ## Overview
 
 The DAB project provides a complete pipeline for data handling, pre-annotation, annotation, prediction and evaluation of anonymization models.
@@ -26,7 +24,6 @@ The DAB project provides a complete pipeline for data handling, pre-annotation, 
 It current version (1.0) supports:
 
 ###  Annotation pipeline ✍️
----
 
 **Data handling**
 
@@ -41,7 +38,6 @@ It current version (1.0) supports:
 - Annotate your own data in Label Studio. Follow the DAB Annotation Guidelines and the Label Studio setup guide in the `annotation/` folder.
 
 ### Benchmark pipeline 📊
----
 
 **Model prediction**
 
@@ -49,8 +45,6 @@ It current version (1.0) supports:
 
 **Model evaluation**
 - Evaluating anonymization models using precision, recall, and other metrics.
-
----
 
 ## Repository Structure
 
@@ -68,8 +62,6 @@ DAB/
 └── README.md                  # Project documentation
 ```
 
----
-
 ## 🔧 Setup
 
 1. Clone the repository:
@@ -82,7 +74,6 @@ DAB/
    ```bash
    bash setup.sh
    ```
----
 
 ## Usage
 
@@ -123,19 +114,12 @@ python src/benchmark/benchmark_model.py \
   --benchmark_output_dir ./output/benchmarks/ \
   --model DaAnonymization
 ```
----
 
 ## Annotation Guidelines
 
 Finalize the annotation guidelines and ensure consistency in the NER label framework. Refer to the `annotation/JSON_format_reference.py` file for details on the JSON structure used for annotations and predictions.
 
----
-
 ## Future implementations
-
-
-
----
 
 ## References
 
