@@ -9,6 +9,8 @@ from typing import Dict, List, Tuple
 from tqdm import tqdm
 import spacy
 import intervaltree
+from transformers import XLMRobertaForMaskedLM, AutoTokenizer
+import torch
 
 
 def parse_arguments():
@@ -65,8 +67,6 @@ def parse_arguments():
 
 
 # POS tags, tokens or characters that can be ignored from the recall scores
-# (because they do not carry much semantic content, and there are discrepancies
-# on whether to include them in the annotated spans or not)
 POS_TO_IGNORE = {"ADP", "PART", "CCONJ", "DET"}
 TOKENS_TO_IGNORE = {"hr", "fru", "nr"}
 CHARACTERS_TO_IGNORE = " ,.-;:/&()[]–'\" ’“”"
@@ -96,9 +96,9 @@ class UniformTokenWeighting(TokenWeighting):
         return [1.0] * len(text_spans)
 
 
-class BertTokenWeighting(TokenWeighting):
-    """Token weighting based on a BERT language model. The weighting mechanism
-    runs the BERT model on a text in which the provided spans are masked. The
+class DanskBertTokenWeighting(TokenWeighting):
+    """Token weighting based on the DanskBERT language model. The weighting mechanism
+    runs the model on a text in which the provided spans are masked. The
     weight of each token is then defined as 1-(probability of the actual token value).
 
     In other words, a token that is difficult to predict will have a high
@@ -106,56 +106,48 @@ class BertTokenWeighting(TokenWeighting):
     be predicted from its content will received a low weight."""
 
     def __init__(self, max_segment_size=100):
-        """Initialises the BERT tokenizers and masked language model"""
+        """Initialises the DanskBERT tokenizers and masked language model"""
 
-        from transformers import BertTokenizerFast, BertForMaskedLM
-
-        self.tokeniser = BertTokenizerFast.from_pretrained("bert-base-uncased")
-
-        import torch
-
+        self.tokeniser = AutoTokenizer.from_pretrained("vesteinn/DanskBERT")
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = BertForMaskedLM.from_pretrained("bert-base-uncased")
+        self.model = XLMRobertaForMaskedLM.from_pretrained("vesteinn/DanskBERT")
         self.model = self.model.to(self.device)
-
         self.max_segment_size = max_segment_size
 
     def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
         """Returns a list of numeric weights between 0 and 1, where each value
         corresponds to 1 - (probability of predicting the value of the text span
-        according to the BERT model).
+        according to the DanskBERT model).
 
-        If the span corresponds to several BERT tokens, the probability is the
+        If the span corresponds to several DanskBERT tokens, the probability is the
         product of the probabilities for each token."""
 
-        import torch
-
-        # STEP 1: we tokenise the text
+        # STEP 1:  tokenise the text
         bert_tokens = self.tokeniser(text, return_offsets_mapping=True)
         input_ids = bert_tokens["input_ids"]
         input_ids_copy = np.array(input_ids)
 
-        # STEP 2: we record the mapping between spans and BERT tokens
+        # STEP 2:  record the mapping between spans and BERT tokens
         bert_token_spans = bert_tokens["offset_mapping"]
         tokens_by_span = self._get_tokens_by_span(bert_token_spans, text_spans)
 
-        # STEP 3: we mask the tokens that we wish to predict
+        # STEP 3:  mask the tokens that  wish to predict
         attention_mask = bert_tokens["attention_mask"]
         for token_indices in tokens_by_span.values():
             for token_idx in token_indices:
                 attention_mask[token_idx] = 0
                 input_ids[token_idx] = self.tokeniser.mask_token_id
 
-        # STEP 4: we run the masked language model
+        # STEP 4:  run the masked language model
         logits = self._get_model_predictions(input_ids, attention_mask)
         unnorm_probs = torch.exp(logits)
         probs = unnorm_probs / torch.sum(unnorm_probs, axis=1)[:, None]
 
-        # We are only interested in the probs for the actual token values
+        #  are only interested in the probs for the actual token values
         probs_actual = probs[torch.arange(len(input_ids)), input_ids_copy]
         probs_actual = probs_actual.detach().cpu().numpy()
 
-        # STEP 5: we compute the weights from those predictions
+        # STEP 5:  compute the weights from those predictions
         weights = []
         for span_start, span_end in text_spans:
 
@@ -164,7 +156,7 @@ class BertTokenWeighting(TokenWeighting):
                 weights.append(0)
                 continue
 
-            # if the span has several tokens, we take the minimum prob
+            # if the span has several tokens,  take the minimum prob
             prob = np.min(
                 [
                     probs_actual[token_idx]
@@ -172,22 +164,22 @@ class BertTokenWeighting(TokenWeighting):
                 ]
             )
 
-            # We finally define the weight as -log(p)
+            #  finally define the weight as -log(p)
             weights.append(-np.log(prob))
 
         return weights
 
     def _get_tokens_by_span(self, bert_token_spans, text_spans):
-        """Given two lists of spans (one with the spans of the BERT tokens, and one with
+        """Given two lists of spans (one with the spans of the DanskBERT tokens, and one with
         the text spans to weight), returns a dictionary where each text span is associated
-        with the indices of the BERT tokens it corresponds to."""
+        with the indices of the DanskBERT tokens it corresponds to."""
 
-        # We create an interval tree to facilitate the mapping
+        #  create an interval tree to facilitate the mapping
         text_spans_tree = intervaltree.IntervalTree()
         for start, end in text_spans:
             text_spans_tree[start:end] = True
 
-        # We create the actual mapping between spans and tokens
+        #  create the actual mapping between spans and tokens
         tokens_by_span = {span: [] for span in text_spans}
         for token_idx, (start, end) in enumerate(bert_token_spans):
             for span_start, span_end, _ in text_spans_tree[start:end]:
@@ -201,20 +193,18 @@ class BertTokenWeighting(TokenWeighting):
 
     def _get_model_predictions(self, input_ids, attention_mask):
         """Given tokenised input identifiers and an associated attention mask (where the
-        tokens to predict have a mask value set to 0), runs the BERT language and returns
+        tokens to predict have a mask value set to 0), runs the DanskBERT model and returns
         the (unnormalised) prediction scores for each token.
 
-        If the input length is longer than max_segment size, we split the document in
+        If the input length is longer than max_segment size,  split the document in
         small segments, and then concatenate the model predictions for each segment."""
-
-        import torch
 
         nb_tokens = len(input_ids)
 
         input_ids = torch.tensor(input_ids)[None, :].to(self.device)
         attention_mask = torch.tensor(attention_mask)[None, :].to(self.device)
 
-        # If the number of tokens is too large, we split in segments
+        # If the number of tokens is too large,  split in segments
         if nb_tokens > self.max_segment_size:
             nb_segments = math.ceil(nb_tokens / self.max_segment_size)
 
@@ -316,6 +306,7 @@ class GoldCorpus:
         self.documents: Dict[str, GoldDocument] = {}
 
         # Loading the spacy model
+        # This is later used to remove the POS-tags, tokens and characters to ignore
         nlp = spacy.load(spacy_model)
 
         # gold_standard_json_file is the annotated dataset
@@ -377,7 +368,7 @@ class GoldCorpus:
         - include_direct: whether to include direct identifiers in the metric
         - include_quasi: whether to include quasi identifiers in the metric
 
-        The recall is computed at the level of entities and not mentions, and we consider
+        The recall is computed at the level of entities and not mentions, and  consider
         an entity to be masked only if all of its mentions are masked.
 
         If annotations from several annotators are available for a given document, the recall
@@ -509,8 +500,8 @@ class GoldCorpus:
     ):
         """Prints out the false negatives (mentions that should have been masked but
         haven't) to facilitate error analysis.
-        If include_partial_match is set to True, we include mentions which are partially
-        masked. If include_no_match is set to True, we include mentions that are not
+        If include_partial_match is set to True,  include mentions which are partially
+        masked. If include_no_match is set to True,  include mentions that are not
         masked at all.
         """
 
@@ -572,7 +563,7 @@ class GoldCorpus:
         for doc in tqdm(masked_docs):
             gold_doc = self.documents[doc.doc_id]
 
-            # We extract the list of spans (token- or mention-level)
+            #  extract the list of spans (token- or mention-level)
             system_masks = []
             for start, end in doc.masked_spans:
                 if token_level:
@@ -580,17 +571,17 @@ class GoldCorpus:
                 else:
                     system_masks += [(start, end)]
 
-            # We compute the weights (information content) of each mask
+            #  compute the weights (information content) of each mask
             weights = token_weighting.get_weights(gold_doc.text, system_masks)
 
-            # We store the number of annotators in the gold standard document
+            #  store the number of annotators in the gold standard document
             nb_annotators = len(
                 set(entity.annotator for entity in gold_doc.entities.values())
             )
 
             for (start, end), weight in zip(system_masks, weights):
 
-                # We extract the annotators that have also masked this token/span
+                #  extract the annotators that have also masked this token/span
                 annotators = gold_doc.get_annotators_for_span(start, end)
                 # print(f"[INFO]: Number of annotators in the corpus: {annotators}")
 
@@ -633,7 +624,7 @@ class GoldDocument:
 
             for entity in self._get_entities_from_mentions(annotation_dict["result"]):
 
-                # We require each entity_id to be specific for each annotator
+                #  require each entity_id to be specific for each annotator
                 if entity.entity_id in self.entities:
                     raise RuntimeError(
                         f"Entity ID {entity.entity_id} already used by another annotator"
@@ -686,15 +677,15 @@ class GoldDocument:
                     ]
                     is_direct = result_dict["value"]["labels"][0] == "DIREKTE"
 
-                    # We check whether the entity is already defined
+                    #  check whether the entity is already defined
                     if entity_id in entities:
 
-                        # If yes, we simply add a new mention
+                        # If yes,  simply add a new mention
                         current_entity = entities[entity_id]
                         current_entity.mentions.append((start, end))
                         current_entity.mention_level_masking.append(need_masking)
 
-                    # Otherwise, we create a new entity with one single mention
+                    # Otherwise,  create a new entity with one single mention
                     else:
                         new_entity = AnnotatedEntity(
                             entity_id=entity_id,
@@ -726,7 +717,7 @@ class GoldDocument:
                 continue
 
             # The masking is sometimes inconsistent for the same entity,
-            # so we verify that the mention does need masking
+            # so  verify that the mention does need masking
             elif entity.mention_level_masking[incr]:
                 return False
         return True
@@ -743,10 +734,10 @@ class GoldDocument:
         # Computes the character offsets that must be masked
         offsets_to_mask = set(range(mention_start, mention_end))
 
-        # We build the set of character offsets that are not covered
+        #  build the set of character offsets that are not covered
         non_covered_offsets = offsets_to_mask - masked_doc.get_masked_offsets()
 
-        # If we have not covered everything, we also make sure punctuations
+        # If  have not covered everything,  also make sure punctuations
         # spaces, titles, etc. are ignored
         if len(non_covered_offsets) > 0:
             span = self.spacy_doc.char_span(
@@ -759,7 +750,7 @@ class GoldDocument:
             if self.text[i] in set(CHARACTERS_TO_IGNORE):
                 non_covered_offsets.remove(i)
 
-        # If that set is empty, we consider the mention as properly masked
+        # If that set is empty,  consider the mention as properly masked
         return len(non_covered_offsets) == 0
 
     def get_entities_to_mask(self, include_direct=True, include_quasi=True):
@@ -769,7 +760,7 @@ class GoldDocument:
         to_mask = []
         for entity in self.entities.values():
 
-            # We only consider entities that need masking and are the right type
+            #  only consider entities that need masking and are the right type
             if not entity.need_masking:
                 continue
             elif entity.is_direct and not include_direct:
@@ -785,7 +776,7 @@ class GoldDocument:
         have also decided to mask it. Concretely, the method returns a (possibly
         empty) set of annotators names that have masked that span."""
 
-        # We compute an interval tree for fast retrieval
+        #  compute an interval tree for fast retrieval
         if not hasattr(self, "masked_spans"):
             self.masked_spans = intervaltree.IntervalTree()
             for entity in self.entities.values():
@@ -799,7 +790,7 @@ class GoldDocument:
             start_token:end_token
         ]:
 
-            # We require that the span is fully covered by the annotator
+            #  require that the span is fully covered by the annotator
             if mention_start <= start_token and mention_end >= end_token:
                 annotators.add(annotator)
 
@@ -915,10 +906,10 @@ if __name__ == "__main__":
     if args.bert_weighting:
 
         weighted_token_precision = gold_corpus.get_precision(
-            masked_docs, BertTokenWeighting()
+            masked_docs, DanskBertTokenWeighting()
         )
         weighted_mention_precision = gold_corpus.get_precision(
-            masked_docs, BertTokenWeighting(), False
+            masked_docs, DanskBertTokenWeighting(), False
         )
 
         weighted_output = f"""==> DanskBERT-weighted, token-level precision on all identifiers: {weighted_token_precision:.3f}

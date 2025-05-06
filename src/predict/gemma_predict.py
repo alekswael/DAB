@@ -3,7 +3,7 @@ import argparse
 import os
 import json
 import re
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from transformers import pipeline
 from google import genai
 import torch
 from dotenv import load_dotenv

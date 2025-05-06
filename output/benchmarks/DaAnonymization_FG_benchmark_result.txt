@@ -7,5 +7,5 @@
 ==> Entity-level recall on quasi identifiers: 0.567
 ==> Uniform token-level precision on all identifiers: 0.715
 ==> Uniform mention-level precision on all identifiers: 0.764
-==> DanskBERT-weighted, token-level precision on all identifiers: 0.713
-==> DanskBERT-weighted, mention-level precision on all identifiers: 0.766
+==> DanskBERT-weighted, token-level precision on all identifiers: 0.723
+==> DanskBERT-weighted, mention-level precision on all identifiers: 0.786

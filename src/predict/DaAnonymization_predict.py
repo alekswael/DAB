@@ -160,7 +160,6 @@ def regex_pipeline(text, dacy_text, dacy_offsets):
     return chunk_offsets, masked_text
 
 
-# Function to chunk text without overlap
 def tokenize_and_chunk_text(text, tokenizer, max_length=512):
     # Tokenize
     tokens = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)

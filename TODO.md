@@ -4,6 +4,8 @@ README
 Ask Ross for feedback on:
     Is my code clean? Are the style deviations okay?
     Bash vs python runner scripts
+    Do I need to show how I generated the dataset in the script?
+        Yes, just use default values 
 
 finalize the annotation guidelines (change ner label framework)
 
