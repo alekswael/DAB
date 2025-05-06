@@ -26,10 +26,10 @@ def parse_arguments():
         help="the path to the JSON file containing the gold standard annotations",
     )
     parser.add_argument(
-        "--masked_output_dir",
+        "--model_predictions_file",
         type=str,
-        default="./output/predictions/",
-        help="the path to the directory containing JSON files with actual spans masked by the system",
+        default="./output/predictions/DaAnonymization_predictions.json",
+        help="the path to the file containing JSON files with actual spans masked by the system",
     )
     parser.add_argument(
         "--benchmark_output_dir",
@@ -41,7 +41,7 @@ def parse_arguments():
         "--model",
         type=str,
         default="DaAnonymization",
-        help="The model to be benchmarked - choose between DaAnonymization, DaAnonymization_FG, Gemma",
+        help="The model name to be benchmarked - choose between DaAnonymization, DaAnonymization_FG, Gemma",
     )
     parser.add_argument(
         "--bert_weighting",
@@ -853,7 +853,7 @@ if __name__ == "__main__":
 
     gold_corpus = GoldCorpus(args.gold_standard_file)
 
-    masked_output_file = args.masked_output_dir + args.model + "_predictions.json"
+    masked_output_file = args.model_predictions_file
 
     masked_docs = get_masked_docs_from_file(masked_output_file)
 

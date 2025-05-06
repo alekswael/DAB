@@ -51,7 +51,7 @@ def load_data(data_path):
 def instantiate_model(fine_grained):
 
     tokenizer = AutoTokenizer.from_pretrained(
-        "saattrupdan/nbailab-base-ner-scandi",
+        "vesteinn/DanskBERT",
         clean_up_tokenization_spaces=True,
         is_split_into_words=False,
         truncation=False,

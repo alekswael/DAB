@@ -1,10 +1,7 @@
-"""
-This script is a reference for navigating the nested structure of the Label Studio input- and output JSON formats.
-It also demonstrates the naming convention used throughout the codebase, written in pseudo-code for interpretability.
-"""
+# Data formatting reference
 
-##### Format of input data for Label Studio (for annotating with pre-annotations) #####
-
+## Label Studio pre-annotated input JSON format
+```py
 data_list = [entry_dict1, entry_dict2, ...]  # insert entry_dict(s)
 
 entry_dict = {  # entry for a document
@@ -42,9 +39,10 @@ prediction_result_dict = {  # contains a single marked entity
         "labels": ["LABEL"],  # insert labels, e.g. 'PER'
     },
 }
+```
 
-##### Format of output (annotated) data #####
-
+## Label Studio annotated output JSON format
+```py
 data_list = [entry_dict1, entry_dict2, ...]  # insert entry_dict(s)
 
 entry_dict = {
@@ -158,3 +156,31 @@ prediction_result_dict = {  # contains a single marked entity
         "labels": ["LABEL"],  # insert label, e.g. 'PER'
     },
 }
+```
+
+## Model prediction JSON reference
+
+The model predictions should be saved as a JSON file with the following structure.
+
+```py
+[
+    {
+        "doc_id_1": [
+            [start, end],   # entity 1 offsets
+            [start, end],   # entity 2 offsets
+            ...
+        ],
+        "doc_id_2": [
+            [start, end],   # entity 1 offsets
+            [start, end],   # entity 2 offsets
+            ...
+        ],
+        ...
+    },
+    {
+        "doc_id_1": "This is the document text for doc_id_1",
+        "doc_id_2": "This is the document text for doc_id_2",
+        ...
+    }
+]
+```

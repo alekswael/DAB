@@ -3,6 +3,7 @@ misc/
 packages_from_source/
 *.swp
 TODO.md
+TODO.txt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

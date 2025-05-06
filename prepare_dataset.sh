@@ -18,14 +18,14 @@ source "$VENV_DIR/bin/activate"
 
 # Run scripts
 $PYTHON src/data_processing/compile_dataset.py \
---data_dir ./data/raw/ \
---save_path ./data/DAB_dataset_pre_annotated.json
+--data_dir "./data/raw/" \
+--save_path "./data/DAB_dataset_pre_annotated.json"
 
 echo "Generating pre-annotations..."
 $PYTHON src/data_processing/pre_annotate.py \
---data_path ./data/DAB_dataset.json \
---save_path ./data/DAB_dataset_pre_annotated.json \
---model dacy
+--data_path "./data/DAB_dataset.json" \
+--save_path "./data/DAB_dataset_pre_annotated.json" \
+--model "dacy"
 
 # Deactivate the virtual environment
 deactivate
