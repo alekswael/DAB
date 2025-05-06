@@ -1,6 +1,6 @@
 # Danish Anonymization Benchmark (DAB)
 
-**Version:** 1.0
+*Version:* 1.0
 
 The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source benchmark for evaluating automated anonymization of Danish text data. The current version (1.0) consists of 54 manually annotated (anonymized) Danish documents and pipelines for benchmarking anonymization models and expanding the dataset by adding and annotating new data. 
 
@@ -31,9 +31,9 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 
 - **Model prediction**: Generate masking predictions with an anonymization model. Currently, the project contains code for generating predictions with three model configurations:
 
-    1. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large_ (simple, adapted version for this project)
-    2. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large fine-grained_ (simple, adapted version for this project)
-    3. [_google/gemma-3-12b-it_](https://huggingface.co/google/gemma-3-12b-it), implemented through HuggingFace
+  1. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large_ (simple, adapted version for this project)
+  2. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large fine-grained_ (simple, adapted version for this project)
+  3. [_google/gemma-3-12b-it_](https://huggingface.co/google/gemma-3-12b-it), implemented through HuggingFace
 
   To generate predictions for these models, you can run the `predict_masks.sh` script:
   
