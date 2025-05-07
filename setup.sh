@@ -21,13 +21,19 @@ fi
 # Activate the virtual environment
 source "$VENV_DIR/bin/activate"
 
+# spacy-experimental 6.4.0 must be built from git
+git clone https://github.com/explosion/spacy-experimental.git external/spacy-experimental
+
 # Install dependencies from requirements.txt
 if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
     echo "Dependencies installed."
 else
-    echo "No requirements.txt file found."
+    echo "WARNING: No requirements.txt file found."
 fi
+
+# Force transformers==4.50.0
+pip install transformers==4.50.0
 
 # Download spacy model
 $PYTHON -m spacy download da_core_news_trf

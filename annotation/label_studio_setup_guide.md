@@ -40,7 +40,7 @@ This will launch the Label Studio web interface, accessible through your browser
 4. Click **Save** to apply the configuration.
 
 ### Step 6: Start Labeling
-1. Make sure to thoroughly read the [DAB Annotation Guidelines](annotation/DAB_annotation_guidelines.md).
+1. Make sure to thoroughly read the [DAB Annotation Guidelines](annotation/DAB_Annotation_Guidelines.pdf).
 1. Navigate to your project.
 2. Click on **Label All Tasks**.
 2. Begin labeling your data using the configured interface.

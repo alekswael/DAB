@@ -121,7 +121,7 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 
 4. ✍️ **Annotate the documents in Label Studio**
 
-    Annotate your own data in Label Studio. Read and follow the [DAB Annotation Guidelines](annotation/DAB_annotation_guidelines.md) and the [Label Studio setup guide](annotation/label_studio_setup_guide.md) in the `annotation/` folder.
+    Annotate your own data in Label Studio. Read and follow the [DAB Annotation Guidelines](annotation/DAB_Annotation_Guidelines.pdf) and the [Label Studio setup guide](annotation/label_studio_setup_guide.md) in the `annotation/` folder.
 
 ## Future implementations
 

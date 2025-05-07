@@ -115,7 +115,7 @@ Now it's your turn.
     user_prompt = f"Text:\n\n{text}\n\nOutput:\n\n"
 
     full_prompt = instruction_prompt + user_prompt
-    output = pipe(full_prompt, return_full_text=False, max_new_tokens = 8192)
+    output = pipe(full_prompt, return_full_text=False, max_new_tokens=8192)
     output_text = output[0]["generated_text"]
 
     return output_text
