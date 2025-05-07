@@ -35,7 +35,7 @@ def parse_arguments():
         "--cloud",
         action="store_true",
         help="If True, the model will be run through Google's API using a free-tier key (as of May 5th, 2025).",
-        default=True,
+        default=False,
     )
 
     return parser.parse_args()
