@@ -16,7 +16,12 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 
 ## 🔧 Setup
 
-This project is developed on Python 3.12.3 and **only supports Python 3.12** - make sure you have a working installation before proceeding.
+**System requirements:**
+
+- This project is developed on Python 3.12.3 and **only supports Python 3.12**.
+- Bash-compatible shell
+
+**Guide for setup:**
 
 1. Clone the repository:
     ```bash
@@ -31,7 +36,7 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     This script checks for the Python version, creates a virtual environment `venv`, installs dependencies from `requirements.txt` and downloads a SpaCy model.
     
 
-3. Activate the virtual environment (automatic in `.sh` scripts, use for running Python scripts directly):
+3. Activate the virtual environment:
 
     ```bash
     # For MacOS and Linux
@@ -68,7 +73,7 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     There is also support for generating masks by prompting an instruction-tuned model hosted on 🤗 Hugging Face. To do this, you can run the `hf_pipeline_predict.py` script and specify the `--model_name` flag:
 
     ```bash
-    python3 src/predict/hf_pipeline_predict.py \
+    python src/predict/hf_pipeline_predict.py \
       --data_path "./data/DAB_annotated_dataset.json" \
       --save_path "./output/predictions/gemma_3_1b_it_predictions.json" \
       --model_name "google/gemma-3-1b-it"
@@ -91,7 +96,7 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     To benchmark a single model, make sure the predictions are available in `output/predictions/`. Specify the arguments and run the `benchmark_model.py` script:
 
     ```bash
-    python3 src/benchmark/benchmark_model.py \
+    python src/benchmark/benchmark_model.py \
     --gold_standard_file "./data/DAB_annotated_dataset.json" \
     --model_predictions_file "./output/predictions/mymodel_predictions.json" \
     --benchmark_output_file "./output/benchmarks/mymodel_benchmark_result.txt" \
@@ -128,7 +133,7 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     Run the `compile_dataset.py` script:
 
     ```bash
-    python3 src/data_processing/compile_dataset.py \
+    python src/data_processing/compile_dataset.py \
       --data_dir "./data/raw/" \
       --save_path "./data/dataset.json"
     ```
@@ -140,7 +145,7 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     Pre-annotate the dataset to bootstrap the annotation process. The pre-annotations consist of fine-grained named entities generated with _DaCy_ fine-grained medium (Enevoldsen et al., 2021; Enevoldsen et al., 2024) and a series of RegExes. To pre-annotate the dataset, run the `pre_annotate.py` script:
 
     ```bash
-    python3 src/data_processing/pre_annotate.py \
+    python src/data_processing/pre_annotate.py \
       --data_path "./data/dataset.json" \
       --save_path "./data/dataset_pre_annotated.json" \
       --model "dacy"
@@ -155,14 +160,14 @@ This project is developed on Python 3.12.3 and **only supports Python 3.12** - m
     After saving your annotated JSON file, post-process it to make it compatible with the prediction/evaluation pipeline. Run the `add_entity_ids.py` script:
 
     ```bash
-    python3 src/data_processing/add_entity_ids.py \
+    python src/data_processing/add_entity_ids.py \
         --data_path "./data/dataset_annotated_dataset.json"
     ```
 
     If you want to print the masked text from your annotations, you can run `check_annotated_offsets.py`:
 
     ```bash
-    python3 src/data_processing/check_annotated_offsets.py \
+    python src/data_processing/check_annotated_offsets.py \
         --data_path "./data/dataset_annotated_dataset.json"
     ```
 
