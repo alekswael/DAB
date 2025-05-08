@@ -33,7 +33,7 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
     ```bash
     bash setup.sh
     ```
-    This script checks for the Python version, creates a virtual environment `venv`, installs dependencies from `requirements.txt` and downloads a SpaCy model.
+    This script checks for the Python version, creates a virtual environment at `venv/`, installs dependencies from `requirements.txt` and downloads a SpaCy model.
     
 
 3. Activate the virtual environment:

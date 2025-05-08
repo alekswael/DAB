@@ -8,19 +8,13 @@
 
 ### Step 1: Start Label Studio
 
-Run the `annotate_dataset.sh` script:
+1. Run the following command:
 
-```bash
-bash annotate_dataset.sh
-```
+    ```bash
+    label-studio start
+    ```
 
-Or you can simply run:
-
-```bash
-label-studio start
-```
-
-This will launch the Label Studio web interface, accessible through your browser at `http://localhost:8080`.
+    This will launch the Label Studio web interface, accessible through your browser at `http://localhost:8080`.
 
 ### Step 2: Login
 1. Sign-up to login.
