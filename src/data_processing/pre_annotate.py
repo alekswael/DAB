@@ -35,7 +35,10 @@ def parse_arguments():
         default="./data/dataset_pre_annotated.json",
         required=False,
     )
-    parser.add_argument("--verbose", action="store_true", default=True)
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False)
 
     return parser.parse_args()
 
@@ -58,7 +61,7 @@ def load_data(data_path):
 
 def initiate_ner_pipeline(verbose):
     """
-    Initialize the NER pipeline by loading the tokenizer.
+    Initialize the NER pipeline and the tokenizer.
 
     Args:
         verbose (bool): Flag to enable verbose logging.
@@ -79,10 +82,13 @@ def initiate_ner_pipeline(verbose):
         print(f"Tokenizer init parameters: {tokenizer.init_kwargs}")
         print(f"Tokenizer: {tokenizer}")
 
-    return tokenizer
+
+    dacy_model = dacy.load(MODEL)
+
+    return tokenizer, dacy_model
 
 
-def ner_pipeline(text):
+def ner_pipeline(text, dacy_model):
     """
     Perform Named Entity Recognition (NER) on the given text.
 
@@ -92,8 +98,8 @@ def ner_pipeline(text):
     Returns:
         tuple: A list of entities and their spans.
     """
-    nlp = dacy.load(MODEL)
-    doc = nlp(text)
+    
+    doc = dacy_model(text)
 
     ents = []
     ner_spans = []
@@ -266,7 +272,7 @@ def tokenize_and_chunk_text(text, tokenizer, verbose, max_length=MAX_LENGTH):
     return chunks
 
 
-def process_long_text(text, tokenizer, ner_pipeline, verbose):
+def process_long_text(text, tokenizer, dacy_model, verbose):
     """
     Process long text by chunking, applying NER, and regex pipelines.
 
@@ -289,7 +295,7 @@ def process_long_text(text, tokenizer, ner_pipeline, verbose):
         if not input_ids_chunk:  # Handles empty chunks
             continue
 
-        ents, ner_spans = ner_pipeline(text_chunk)
+        ents, ner_spans = ner_pipeline(text_chunk, dacy_model)
         regex_ents = regex_pipeline(text_chunk, ner_spans)
         ents.extend(regex_ents)
 
@@ -309,7 +315,7 @@ def process_long_text(text, tokenizer, ner_pipeline, verbose):
     return all_ents
 
 
-def get_pre_annotations(data_list, ner_pipeline, tokenizer, verbose):
+def get_pre_annotations(data_list, tokenizer, dacy_model, verbose):
     """
     Generate pre-annotations for the dataset.
 
@@ -329,7 +335,7 @@ def get_pre_annotations(data_list, ner_pipeline, tokenizer, verbose):
 
         # Define the predictions_dict
         predictions_dict = {
-            "model_version": dacy,  # insert model version
+            "model_version": "DaCy_RegEx",  # insert model version
             "result": [],  # insert result_dict(s)
         }
 
@@ -338,7 +344,7 @@ def get_pre_annotations(data_list, ner_pipeline, tokenizer, verbose):
             continue
 
         # Get the NER-predictions
-        all_ents = process_long_text(text, tokenizer, ner_pipeline, verbose)
+        all_ents = process_long_text(text, tokenizer, dacy_model, verbose)
 
         for ent in all_ents:
 
@@ -391,9 +397,9 @@ def main():
     """
     args = parse_arguments()
     data_list = load_data(args.data_path)
-    tokenizer = initiate_ner_pipeline(args.verbose)
-    ner_pipeline = ner_pipeline(args.verbose)
-    get_pre_annotations(data_list, ner_pipeline, tokenizer, args.verbose)
+    tokenizer, dacy_model = initiate_ner_pipeline(args.verbose)
+    data_list = get_pre_annotations(data_list, tokenizer, dacy_model, args.verbose)
+    print(data_list)
     save_json(data_list, args.save_path)
 
 

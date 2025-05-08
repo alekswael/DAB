@@ -168,7 +168,7 @@ def main():
     Main function to parse arguments, process data, and save the dataset.
     """
     args = parse_arguments()
-    data_list = process_data(args.data_path)
+    data_list = process_data(args.data_dir)
     save_json(data_list, args.save_path)
 
 

@@ -25,7 +25,7 @@
 
 ### Step 4: Import Data
 1. Go to the **Data Import** tab.
-2. Click **Upload files** and upload your data files (make sure the formatting is correct).
+2. Click **Upload files** and upload your pre-annotated dataset.
 
 ### Step 5: Configure Labeling Interface
 1. Go to the **Labeling Setup** tab.

@@ -8,8 +8,10 @@ from google import genai
 import torch
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Constants
+LOCAL_MODEL = "google/gemma-3-12b-it"
+CLOUD_MODEL = "gemma-3-12b-it"
+MAX_NEW_TOKENS = 8192 # Maximum number of tokens for model output
 
 
 def parse_arguments():
@@ -81,7 +83,7 @@ def instantiate_pipeline(cloud):
         print(f"[INFO]: Running model locally...")
         pipe = pipeline(
             "text-generation",
-            model="google/gemma-3-12b-it",
+            model=LOCAL_MODEL,
             model_kwargs={"torch_dtype": torch.bfloat16},
             device="cpu",
         )
@@ -171,7 +173,7 @@ def generate_output(text, pipe, instruction_prompt, cloud):
     if cloud == True:
 
         output = pipe.models.generate_content(
-            model="gemma-3-12b-it",
+            model=CLOUD_MODEL,
             contents=full_prompt,
         )
 
@@ -180,10 +182,10 @@ def generate_output(text, pipe, instruction_prompt, cloud):
     ##### Local Model #####
     else:
 
-        output = pipe(full_prompt, return_full_text=False, max_new_tokens=8192)
+        output = pipe(full_prompt, return_full_text=False, max_new_tokens=MAX_NEW_TOKENS)
         output_text = output[0]["generated_text"]
 
-        return output_text, full_prompt
+        return output_text
 
 
 def save_json(data_list, save_path):
@@ -205,6 +207,7 @@ def main():
     Main function to execute the script. Parses arguments, loads data, processes it using a model,
     and saves the output.
     """
+    load_dotenv()
     args = parse_arguments()
     data_list = load_data(args.data_path)
     pipe = instantiate_pipeline(args.cloud)

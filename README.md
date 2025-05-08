@@ -147,8 +147,7 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
     ```bash
     python src/data_processing/pre_annotate.py \
       --data_path "./data/dataset.json" \
-      --save_path "./data/dataset_pre_annotated.json" \
-      --model "dacy"
+      --save_path "./data/dataset_pre_annotated.json"
     ```
 
 4. ✍️ **Annotate the documents in Label Studio**
@@ -161,14 +160,14 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 
     ```bash
     python src/data_processing/add_entity_ids.py \
-        --data_path "./data/dataset_annotated_dataset.json"
+        --data_path "./data/dataset_annotated.json"
     ```
 
     If you want to print the masked text from your annotations, you can run `check_annotated_offsets.py`:
 
     ```bash
     python src/data_processing/check_annotated_offsets.py \
-        --data_path "./data/dataset_annotated_dataset.json"
+        --data_path "./data/dataset_annotated.json"
     ```
 
 ## Known bugs/errors

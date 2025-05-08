@@ -5,11 +5,11 @@ REQUIRED_VERSION="3.12"
 # Try to find a python3.12 executable
 if command -v python3.12 &> /dev/null; then
     PYTHON_BIN=$(command -v python3.12)
-    echo "Python version: $PYTHON"
+    echo "Python version: $PYTHON_BIN"
 else
     # Fallback to python3
     PYTHON_BIN=$(command -v python3)
-    if [ -z "$PYTHON" ]; then
+    if [ -z "$PYTHON_BIN" ]; then
         echo "Python 3 is not installed."
         exit 1
     fi
@@ -28,6 +28,14 @@ echo "Detected OS: $OS"
 
 # Set the virtual environment directory name
 VENV_DIR="venv"
+
+# Create the virtual environment if it doesn't exist
+if [ ! -d "$VENV_DIR" ]; then
+    $PYTHON_BIN -m venv "$VENV_DIR"
+    echo "Virtual environment created in $VENV_DIR."
+else
+    echo "Virtual environment already exists."
+fi
 
 # Activate the virtual environment based on the OS
 if [[ "$OS" == "Linux" || "$OS" == "Darwin" ]]; then

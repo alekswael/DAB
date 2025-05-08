@@ -8,6 +8,7 @@ import torch
 
 # Constants
 PROMPT_PATH = "./src/predict/hf_pipeline_instruction_prompt.txt"
+MAX_NEW_TOKENS = 8192
 
 
 def parse_arguments():
@@ -158,7 +159,7 @@ def generate_output(text, pipe, instruction_prompt):
     # Combine instruction and user prompt
     user_prompt = f"Text:\n\n{text}\n\nOutput:\n\n"
     full_prompt = instruction_prompt + user_prompt
-    output = pipe(full_prompt, return_full_text=False, max_new_tokens=8192)
+    output = pipe(full_prompt, return_full_text=False, max_new_tokens=MAX_NEW_TOKENS)
     output_text = output[0]["generated_text"]
 
     return output_text
