@@ -41,10 +41,15 @@ This will launch the Label Studio web interface, accessible through your browser
 
 ### Step 6: Start Labeling
 1. Make sure to thoroughly read the [DAB Annotation Guidelines](annotation/DAB_Annotation_Guidelines.pdf).
-1. Navigate to your project.
-2. Click on **Label All Tasks**.
-2. Begin labeling your data using the configured interface.
-3. Save your progress as you work.
+2. Navigate to your project.
+3. Click on **Label All Tasks**.
+4. Begin labeling your data using the configured interface.
+5. Save your progress as you work.
+
+### Step 7: Export annotations
+1. Press **Export** from the project view.
+2. Export as JSON (top-most option).
+3. Save in `data/` folder.
 
 ### Additional Resources
 - [Label Studio Documentation](https://labelstud.io/documentation.html)

@@ -4,6 +4,12 @@ import json
 
 
 def parse_arguments():
+    """
+    Parse command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments containing `data_path` and `save_path`.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for adding unique entity IDs to the annotations."
     )
@@ -11,7 +17,7 @@ def parse_arguments():
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
-        default="./data/annotations_15_04_2025.json",
+        default="./data/DAB_annotated_dataset.json",
         required=False,
     )
     parser.add_argument(
@@ -25,6 +31,15 @@ def parse_arguments():
 
 
 def load_data(data_path):
+    """
+    Load the annotated dataset from a JSON file.
+
+    Args:
+        data_path (str): Path to the JSON file containing the annotated dataset.
+
+    Returns:
+        list: A list of dictionaries representing the annotated dataset.
+    """
     with open(data_path, "r", encoding="utf-8") as doc:
         data_list = json.load(doc)
 
@@ -32,7 +47,15 @@ def load_data(data_path):
 
 
 def add_entity_ids(data_list):
+    """
+    Add unique entity IDs to the annotations in the dataset.
 
+    Args:
+        data_list (list): A list of dictionaries representing the annotated dataset.
+
+    Returns:
+        list: The updated dataset with unique entity IDs added.
+    """
     # Loop through all entities per document and add to a set
 
     # Per doc
@@ -70,7 +93,15 @@ def add_entity_ids(data_list):
 
 
 def id_from_relation(data_list):
+    """
+    Update entity IDs in the dataset based on relations between entities.
 
+    Args:
+        data_list (list): A list of dictionaries representing the annotated dataset.
+
+    Returns:
+        list: The updated dataset with entity IDs propagated based on relations.
+    """
     for entry_dict in data_list:
 
         for annotation_dict in entry_dict["annotations"]:
@@ -104,7 +135,13 @@ def id_from_relation(data_list):
 
 
 def save_json(data_list, save_path):
+    """
+    Save the updated dataset to a JSON file.
 
+    Args:
+        data_list (list): The dataset to save.
+        save_path (str): Path to save the JSON file.
+    """
     json_object = json.dumps(data_list, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
@@ -112,6 +149,9 @@ def save_json(data_list, save_path):
 
 
 def main():
+    """
+    Main function to parse arguments, process the dataset, and save the updated dataset.
+    """
     args = parse_arguments()
 
     if args.save_path is None:

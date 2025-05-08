@@ -18,18 +18,18 @@ echo "Predicting masks..."
 
 # DaAnonymization
 $PYTHON src/predict/DaAnonymization_predict.py \
---data_path "./data/annotations_15_04_2025.json" \
+--data_path "./data/DAB_annotated_dataset.json" \
 --save_path "./output/predictions/DaAnonymization_predictions.json"
 
 # DaAnonymization with fine-grained predictions
 $PYTHON src/predict/DaAnonymization_predict.py \
---data_path "./data/annotations_15_04_2025.json" \
+--data_path "./data/DAB_annotated_dataset.json" \
 --save_path "./output/predictions/DaAnonymization_FG_predictions.json" \
 --fine_grained
 
 # Gemma
 $PYTHON src/predict/gemma_predict.py \
---data_path "./data/annotations_15_04_2025.json" \
+--data_path "./data/DAB_annotated_dataset.json" \
 --save_path "./output/predictions/Gemma_predictions.json" 
 
 # Deactivate the virtual environment

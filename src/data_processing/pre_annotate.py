@@ -2,11 +2,22 @@
 import argparse
 import re
 import json
-from transformers import pipeline, AutoTokenizer
+from transformers import AutoTokenizer
 import dacy
+
+# Constants
+MAX_LENGTH = 512  # Max length of chunk size, 512 is the default for BERT-based models
+TOKENIZER = "vesteinn/DanskBERT"  # DanskBERT tokenizer
+MODEL = "da_dacy_medium_ner_fine_grained-0.1.0"  # DaCy model for fine-grained NER
 
 
 def parse_arguments():
+    """
+    Parse command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments including data_path, save_path, and verbose flag.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for generating the pre-annotations for the annotation pipeline with DaCy + ReGex."
     )
@@ -14,21 +25,14 @@ def parse_arguments():
         "--data_path",
         type=str,
         help="The path to the dataset in Label Studio JSON format.",
-        default="./data/DAB_dataset.json",
+        default="./data/dataset.json",
         required=False,
     )
     parser.add_argument(
         "--save_path",
         type=str,
         help="The path for saving the pre-annotated JSON dataset.",
-        default="./data/DAB_dataset_pre_annotated.json",
-        required=False,
-    )
-    parser.add_argument(
-        "--model",
-        type=str,
-        help="The NER-model used for generating pre-annotations.",
-        default="dacy",
+        default="./data/dataset_pre_annotated.json",
         required=False,
     )
     parser.add_argument("--verbose", action="store_true", default=True)
@@ -37,18 +41,35 @@ def parse_arguments():
 
 
 def load_data(data_path):
+    """
+    Load data from a JSON file.
+
+    Args:
+        data_path (str): Path to the JSON file containing the dataset.
+
+    Returns:
+        list: List of data entries loaded from the JSON file.
+    """
     with open(data_path, "r", encoding="utf-8") as doc:
         data_list = json.load(doc)
 
     return data_list
 
 
-def initiate_ner_pipeline(ner_model, verbose):
-    """Initiate NER-pipeline. Im using ScandiNER."""
-    print(f"[INFO]: Initiating {ner_model} model...")
+def initiate_ner_pipeline(verbose):
+    """
+    Initialize the NER pipeline by loading the tokenizer.
+
+    Args:
+        verbose (bool): Flag to enable verbose logging.
+
+    Returns:
+        transformers.PreTrainedTokenizer: Initialized tokenizer.
+    """
+    print(f"[INFO]: Initiating DaCy model...")
 
     tokenizer = AutoTokenizer.from_pretrained(
-        "saattrupdan/nbailab-base-ner-scandi",
+        TOKENIZER,
         clean_up_tokenization_spaces=True,
         is_split_into_words=False,
         truncation=False,
@@ -58,84 +79,76 @@ def initiate_ner_pipeline(ner_model, verbose):
         print(f"Tokenizer init parameters: {tokenizer.init_kwargs}")
         print(f"Tokenizer: {tokenizer}")
 
-    if ner_model == "scandi_ner":
+    return tokenizer
 
-        def ner_pipeline(text):
 
-            nlp = pipeline(
-                task="ner",
-                model="saattrupdan/nbailab-base-ner-scandi",
-                tokenizer=tokenizer,
-                aggregation_strategy="first",
-            )
+def ner_pipeline(text):
+    """
+    Perform Named Entity Recognition (NER) on the given text.
 
-            ents = pipeline(text)
-            ner_spans = []
+    Args:
+        text (str): Input text to process.
 
-            for ent in ents:
+    Returns:
+        tuple: A list of entities and their spans.
+    """
+    nlp = dacy.load(MODEL)
+    doc = nlp(text)
 
-                if ent["entity_group"] == "PER":
-                    ent["entity_group"] = "PERSON"
+    ents = []
+    ner_spans = []
 
-                ner_span = (ent["start"], ent["end"])
-                ner_spans.append(ner_span)
+    for ent in doc.ents:
 
-            return ents, ner_spans
+        if ent.label_ == "PERSON":
+            pass
 
-    if ner_model == "dacy":
+        elif ent.label_ in {"CARDINAL"}:
+            ent.label_ = "CODE"
 
-        def ner_pipeline(text):
+        elif ent.label_ in {"LOCATION", "FACILITY", "GPE"}:
+            ent.label_ = "LOC"
 
-            nlp = dacy.load("da_dacy_medium_ner_fine_grained-0.1.0")
-            doc = nlp(text)
+        elif ent.label_ == "ORGANIZATION":
+            ent.label_ = "ORG"
 
-            ents = []
-            ner_spans = []
+        elif ent.label_ in {"LANGUAGE", "NORP"}:
+            ent.label_ = "DEM"
 
-            for ent in doc.ents:
+        elif ent.label_ in {"DATE", "TIME"}:
+            ent.label_ = "DATETIME"
 
-                if ent.label_ == "PERSON":
-                    pass
+        elif ent.label_ in {"PERCENT", "QUANTITY", "MONEY", "ORDINAL"}:
+            ent.label_ = "QUANTITY"
 
-                elif ent.label_ in {"CARDINAL"}:
-                    ent.label_ = "CODE"
+        elif ent.label_ in {"PRODUCT", "EVENT", "WORK OF ART", "LAW"}:
+            ent.label_ = "MISC"
 
-                elif ent.label_ in {"LOCATION", "FACILITY", "GPE"}:
-                    ent.label_ = "LOC"
+        ner_span = (ent.start_char, ent.end_char)
+        ner_spans.append(ner_span)
 
-                elif ent.label_ == "ORGANIZATION":
-                    ent.label_ = "ORG"
+        ent = {
+            "entity_group": ent.label_,
+            "word": ent.text,
+            "start": ent.start_char,
+            "end": ent.end_char,
+        }
+        ents.append(ent)
 
-                elif ent.label_ in {"LANGUAGE", "NORP"}:
-                    ent.label_ = "DEM"
-
-                elif ent.label_ in {"DATE", "TIME"}:
-                    ent.label_ = "DATETIME"
-
-                elif ent.label_ in {"PERCENT", "QUANTITY", "MONEY", "ORDINAL"}:
-                    ent.label_ = "QUANTITY"
-
-                elif ent.label_ in {"PRODUCT", "EVENT", "WORK OF ART", "LAW"}:
-                    ent.label_ = "MISC"
-
-                ner_span = (ent.start_char, ent.end_char)
-                ner_spans.append(ner_span)
-
-                ent = {
-                    "entity_group": ent.label_,
-                    "word": ent.text,
-                    "start": ent.start_char,
-                    "end": ent.end_char,
-                }
-                ents.append(ent)
-
-            return ents, ner_spans
-
-    return ner_pipeline, tokenizer
+    return ents, ner_spans
 
 
 def regex_pipeline(text, ner_spans):
+    """
+    Perform regex-based entity extraction on the given text.
 
+    Args:
+        text (str): Input text to process.
+        ner_spans (list): List of spans already identified by the NER pipeline.
+
+    Returns:
+        list: List of entities extracted using regex patterns.
+    """
     cpr_pattern = "|".join(
         [r"[0-3]\d{1}[0-1]\d{3}-\d{4}", r"[0-3]\d{1}[0-1]\d{3} \d{4}"]
     )
@@ -201,7 +214,19 @@ def regex_pipeline(text, ner_spans):
 
 
 # Function to chunk text without overlap
-def tokenize_and_chunk_text(text, tokenizer, verbose, max_length=512):
+def tokenize_and_chunk_text(text, tokenizer, verbose, max_length=MAX_LENGTH):
+    """
+    Tokenize and chunk the input text into smaller segments.
+
+    Args:
+        text (str): Input text to tokenize and chunk.
+        tokenizer (transformers.PreTrainedTokenizer): Tokenizer to use for tokenization.
+        verbose (bool): Flag to enable verbose logging.
+        max_length (int): Maximum length of each chunk.
+
+    Returns:
+        list: List of chunks containing tokenized data and offsets.
+    """
     # Tokenize
     tokens = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
 
@@ -242,7 +267,18 @@ def tokenize_and_chunk_text(text, tokenizer, verbose, max_length=512):
 
 
 def process_long_text(text, tokenizer, ner_pipeline, verbose):
+    """
+    Process long text by chunking, applying NER, and regex pipelines.
 
+    Args:
+        text (str): Input text to process.
+        tokenizer (transformers.PreTrainedTokenizer): Tokenizer to use for tokenization.
+        ner_pipeline (function): NER pipeline function.
+        verbose (bool): Flag to enable verbose logging.
+
+    Returns:
+        list: List of all entities extracted from the text.
+    """
     chunks = tokenize_and_chunk_text(text, tokenizer, verbose)
 
     all_ents = []
@@ -263,7 +299,7 @@ def process_long_text(text, tokenizer, ner_pipeline, verbose):
 
             if verbose:
                 print(
-                    f"Chunk {chunk_counter} entity {ent["word"]} has span: {(ent["start"], ent["end"])}"
+                    f"Chunk {chunk_counter} entity {ent['word']} has span: {(ent['start'], ent['end'])}"
                 )
 
         all_ents.extend(ents)
@@ -273,7 +309,19 @@ def process_long_text(text, tokenizer, ner_pipeline, verbose):
     return all_ents
 
 
-def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, verbose):
+def get_pre_annotations(data_list, ner_pipeline, tokenizer, verbose):
+    """
+    Generate pre-annotations for the dataset.
+
+    Args:
+        data_list (list): List of data entries to annotate.
+        ner_pipeline (function): NER pipeline function.
+        tokenizer (transformers.PreTrainedTokenizer): Tokenizer to use for tokenization.
+        verbose (bool): Flag to enable verbose logging.
+
+    Returns:
+        list: Annotated dataset with predictions added.
+    """
     # Loop over each file
     for entry_dict in data_list:
 
@@ -281,7 +329,7 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, verbose):
 
         # Define the predictions_dict
         predictions_dict = {
-            "model_version": ner_model,  # insert model version
+            "model_version": dacy,  # insert model version
             "result": [],  # insert result_dict(s)
         }
 
@@ -317,14 +365,20 @@ def get_pre_annotations(data_list, ner_model, ner_pipeline, tokenizer, verbose):
         entry_dict["predictions"].append(predictions_dict)
 
         print(
-            f"[INFO]: Done pre-annotating document: {entry_dict["data"]["file_name"]}"
+            f"[INFO]: Done pre-annotating document: {entry_dict['data']['file_name']}"
         )
 
     return data_list
 
 
 def save_json(data_list, save_path):
+    """
+    Save the annotated dataset to a JSON file.
 
+    Args:
+        data_list (list): Annotated dataset to save.
+        save_path (str): Path to save the JSON file.
+    """
     json_object = json.dumps(data_list, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
@@ -332,10 +386,14 @@ def save_json(data_list, save_path):
 
 
 def main():
+    """
+    Main function to execute the pre-annotation pipeline.
+    """
     args = parse_arguments()
     data_list = load_data(args.data_path)
-    ner_pipeline, tokenizer = initiate_ner_pipeline(args.model, args.verbose)
-    get_pre_annotations(data_list, args.model, ner_pipeline, tokenizer, args.verbose)
+    tokenizer = initiate_ner_pipeline(args.verbose)
+    ner_pipeline = ner_pipeline(args.verbose)
+    get_pre_annotations(data_list, ner_pipeline, tokenizer, args.verbose)
     save_json(data_list, args.save_path)
 
 

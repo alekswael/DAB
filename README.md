@@ -9,14 +9,14 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 **The project features:**
 - Generate masking predictions with instruction-tuned 🤗 HuggingFace models
 - Benchmark anonymization models to obtain evaluation metrics
-- Danish annotation guidelines
+- DAB annotation guidelines
 - Annotate new data in Label Studio with a setup guide and config
 - Support for multiple annotators
 - Bootstrap annotations with a pre-annotation framework
 
 ## 🔧 Setup
 
-This project was developed for Python 3.12.3.
+This project is developed on Python 3.12.3 and **only supports Python 3.12** - make sure you have a working installation before proceeding.
 
 1. Clone the repository:
     ```bash
@@ -28,8 +28,20 @@ This project was developed for Python 3.12.3.
     ```bash
     bash setup.sh
     ```
+    This script checks for the Python version, creates a virtual environment `venv`, installs dependencies from `requirements.txt` and downloads a SpaCy model.
+    
 
-    **NOTE:** To use this project, you must be authenticated with the Hugging Face Hub. Please ensure you have a Hugging Face account and an access token. You can log in by running `huggingface-cli login` and following the instructions (see the [documention](https://huggingface.co/docs/huggingface_hub/en/guides/cli) for help).
+3. Activate the virtual environment (automatic in `.sh` scripts, use for running Python scripts directly):
+
+    ```bash
+    # For MacOS and Linux
+    source venv/bin/activate
+
+    # For Windows (cmd.exe)
+    venv\Scripts\activate.bat
+    ```
+
+**NOTE:** To use this project, you must be authenticated with the Hugging Face Hub. Please ensure you have a Hugging Face account and an access token. You can log in by running `huggingface-cli login` and following the instructions (see the [documention](https://huggingface.co/docs/huggingface_hub/en/guides/cli) for help).
 
 ## 👩‍💻 Usage
 
@@ -57,7 +69,7 @@ This project was developed for Python 3.12.3.
 
     ```bash
     python3 src/predict/hf_pipeline_predict.py \
-      --data_path "./data/annotations_15_04_2025.json" \
+      --data_path "./data/DAB_annotated_dataset.json" \
       --save_path "./output/predictions/gemma_3_1b_it_predictions.json" \
       --model_name "google/gemma-3-1b-it"
     ```
@@ -76,11 +88,11 @@ This project was developed for Python 3.12.3.
     bash benchmark_models.sh
     ```
 
-    To benchmark a single model, specify the arguments and run the `benchmark_model.py` script:
+    To benchmark a single model, make sure the predictions are available in `output/predictions/`. Specify the arguments and run the `benchmark_model.py` script:
 
     ```bash
     python3 src/benchmark/benchmark_model.py \
-    --gold_standard_file "./data/annotations_15_04_2025.json" \
+    --gold_standard_file "./data/DAB_annotated_dataset.json" \
     --model_predictions_file "./output/predictions/mymodel_predictions.json" \
     --benchmark_output_file "./output/benchmarks/mymodel_benchmark_result.txt" \
     --bert_weighting
@@ -90,34 +102,38 @@ This project was developed for Python 3.12.3.
 
 1. 📄 **Add new documents**
 
-    Create a new folder in `data/` and add subfolders with documents for annotation (currently supports `.txt` and `.pdf` files). Subfolders should be named according to the source (e.g. `wiki_bio_dk/` as seen in `data/raw/`).
+    Create a new subfolder in `data/raw/` and documents for annotation. Each subfolder should be named according to the dataset source, e.g.
 
     ```
     data/
-    ├── my_data/
-    │   ├── data_source_1/
+    ├── raw/
+    │   ├── private_docs/
     │   │   ├── document1.txt
     │   │   ├── document2.pdf
     │   │   └── ...
-    │   ├── data_source_2/
+    │   ├── legal_cases/
     │   │   ├── case1.txt
     │   │   ├── case2.pdf
     │   │   └── ...
-    │   ├── data_source_3/
+    │   ├── news_articles/
     │   │   ├── article1.txt
     │   │   ├── article2.pdf
     │   │   └── ...
     ```
 
+    **NOTE:** Currently supports `.txt` and `.pdf` (native and non-native) files.
+
 2. 📁 **Compile dataset**
 
-    Compile the raw documents from the subfolders in `data/raw/` and format into a single basic Label Studio JSON. To achieve this, run the `prepare_dataset.sh` script:
+    Run the `compile_dataset.py` script:
 
     ```bash
     python3 src/data_processing/compile_dataset.py \
       --data_dir "./data/raw/" \
-      --save_path "./data/DAB_dataset_pre_annotated.json"
+      --save_path "./data/dataset.json"
     ```
+
+    Compile the raw documents from the subfolders in `data/raw/` and format into a single basic Label Studio JSON.
 
 3. 🤖 **Pre-annotate dataset**
 
@@ -125,13 +141,37 @@ This project was developed for Python 3.12.3.
 
     ```bash
     python3 src/data_processing/pre_annotate.py \
-      --data_dir "./data/raw/" \
-      --save_path "./data/DAB_dataset_pre_annotated.json"
+      --data_path "./data/dataset.json" \
+      --save_path "./data/dataset_pre_annotated.json" \
+      --model "dacy"
     ```
 
 4. ✍️ **Annotate the documents in Label Studio**
 
     Annotate your own data in Label Studio. Read and follow the [DAB Annotation Guidelines](annotation/DAB_Annotation_Guidelines.pdf) and the [Label Studio setup guide](annotation/label_studio_setup_guide.md) in the `annotation/` folder.
+
+5. 🛠️ **Post-process annotated dataset**
+
+    After saving your annotated JSON file, post-process it to make it compatible with the prediction/evaluation pipeline. Run the `add_entity_ids.py` script:
+
+    ```bash
+    python3 src/data_processing/add_entity_ids.py \
+        --data_path "./data/dataset_annotated_dataset.json"
+    ```
+
+    If you want to print the masked text from your annotations, you can run `check_annotated_offsets.py`:
+
+    ```bash
+    python3 src/data_processing/check_annotated_offsets.py \
+        --data_path "./data/dataset_annotated_dataset.json"
+    ```
+
+## Known bugs/errors
+
+- `spacy-experimental 0.6.4` must be installed from source, see the `setup.sh` file
+- Running with Python 3.13 will raise an error when installing `spacy-experimental 0.6.4`
+- Gemma 3 models require atleast `transformers==4.50.0`, forcing this raises dependency issues with `spacy-transformers` but has no impact on performance
+
 
 ## Future implementations
 

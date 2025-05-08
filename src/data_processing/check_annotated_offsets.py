@@ -4,6 +4,12 @@ import json
 
 
 def parse_arguments():
+    """
+    Parse command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments containing `data_path`.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for checking the offsets of the annotated masks after exporting from Label Studio."
     )
@@ -11,7 +17,7 @@ def parse_arguments():
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
-        default="./data/annotations_15_04_2025.json",
+        default="./data/DAB_annotated_dataset.json",
         required=False,
     )
 
@@ -19,6 +25,15 @@ def parse_arguments():
 
 
 def load_data(data_path):
+    """
+    Load the annotated dataset from a JSON file.
+
+    Args:
+        data_path (str): Path to the JSON file containing the annotated dataset.
+
+    Returns:
+        list: A list of dictionaries representing the annotated dataset.
+    """
     with open(data_path, "r", encoding="utf-8") as doc:
         data_list = json.load(doc)
 
@@ -26,7 +41,15 @@ def load_data(data_path):
 
 
 def get_masked_text(data_list):
+    """
+    Mask entities in the text based on their offsets and labels.
 
+    Args:
+        data_list (list): A list of dictionaries representing the annotated dataset.
+
+    Returns:
+        None
+    """
     # Per doc
     for entry_dict in data_list:
 
@@ -74,6 +97,9 @@ def get_masked_text(data_list):
 
 
 def main():
+    """
+    Main function to parse arguments, load data, and process masked text.
+    """
     args = parse_arguments()
     data_list = load_data(args.data_path)
     get_masked_text(data_list)

@@ -8,6 +8,12 @@ from pdf2image import convert_from_path  # Convert PDF pages to images
 
 
 def parse_arguments():
+    """
+    Parse command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments containing `data_dir` and `save_path`.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for compiling the documents into a single JSON file, using the Label Studio format."
     )
@@ -22,7 +28,7 @@ def parse_arguments():
         "--save_path",
         type=str,
         help="The path for saving the final JSON dataset.",
-        default="./data/DAB_dataset.json",
+        default="./data/dataset.json",
         required=False,
     )
 
@@ -30,8 +36,15 @@ def parse_arguments():
 
 
 def is_pdf_readable(pdf_path):
-    """Check if a PDF contains selectable text."""
+    """
+    Check if a PDF contains selectable text.
 
+    Args:
+        pdf_path (str): Path to the PDF file.
+
+    Returns:
+        bool: True if the PDF contains selectable text, False otherwise.
+    """
     doc = PdfReader(pdf_path)
     pages = doc.pages
     text = ""
@@ -41,8 +54,16 @@ def is_pdf_readable(pdf_path):
 
 
 def process_pdf(pdf_path):
-    """Process the PDF based on whether it contains text or is scanned."""
+    """
+    Process a PDF file to extract text. If the PDF contains selectable text, it is extracted.
+    Otherwise, OCR is applied to images of the PDF pages.
 
+    Args:
+        pdf_path (str): Path to the PDF file.
+
+    Returns:
+        str: Extracted text from the PDF.
+    """
     if is_pdf_readable(pdf_path):
         doc = PdfReader(pdf_path)
         pages = doc.pages
@@ -60,12 +81,29 @@ def process_pdf(pdf_path):
 
 
 def remove_returns(text):
+    """
+    Replace carriage return and newline characters with newline characters.
+
+    Args:
+        text (str): Input text.
+
+    Returns:
+        str: Text with carriage returns replaced.
+    """
     text = text.replace("\r\n", "\n")
     return text
 
 
 def process_data(data_folder):
+    """
+    Process all text and PDF files in the specified data folder and compile them into a dataset.
 
+    Args:
+        data_folder (str): Path to the folder containing subfolders with .txt and/or .pdf files.
+
+    Returns:
+        list: A list of dictionaries representing the dataset in Label Studio format.
+    """
     data_list = []  # Insert entry_dict(s)
 
     dirs = [f.name for f in os.scandir(data_folder) if f.is_dir()]
@@ -112,7 +150,13 @@ def process_data(data_folder):
 
 
 def save_json(data, save_path):
+    """
+    Save the dataset to a JSON file.
 
+    Args:
+        data (list): The dataset to save.
+        save_path (str): Path to save the JSON file.
+    """
     json_object = json.dumps(data, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
@@ -120,6 +164,9 @@ def save_json(data, save_path):
 
 
 def main():
+    """
+    Main function to parse arguments, process data, and save the dataset.
+    """
     args = parse_arguments()
     data_list = process_data(args.data_path)
     save_json(data_list, args.save_path)

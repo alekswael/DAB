@@ -13,53 +13,7 @@ from transformers import XLMRobertaForMaskedLM, AutoTokenizer
 import torch
 
 
-def parse_arguments():
-
-    parser = argparse.ArgumentParser(
-        description="Computes evaluation metrics for the Danish Text Anonymisation benchmark."
-    )
-
-    parser.add_argument(
-        "--gold_standard_file",
-        type=str,
-        default="./data/annotations_15_04_2025.json",
-        help="the path to the JSON file containing the gold standard annotations",
-    )
-    parser.add_argument(
-        "--model_predictions_file",
-        type=str,
-        default="./output/predictions/DaAnonymization_predictions.json",
-        help="the path to the file containing JSON files with actual spans masked by the system",
-    )
-    parser.add_argument(
-        "--benchmark_output_file",
-        type=str,
-        default="./output/benchmarks/DaAnonymization_benchmark_result.txt",
-        help="The directory to save the benchmark results in",
-    )
-    parser.add_argument(
-        "--bert_weighting",
-        action="store_true",
-        default=True,
-        help="Whether to calculate DanskBERT-weighted precision in addition to uniform.",
-    )
-    parser.add_argument(
-        "--only_docs",
-        default=None,
-        nargs="*",
-        help="list of document identifiers on which to focus the evaluation "
-        + "(if not specified, computes the evaluation measures for all documents)",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        default=False,
-        help="provides detailed evaluation results (defaults to false)",
-    )
-
-    return parser.parse_args()
-
-
+# Constants
 # POS tags, tokens or characters that can be ignored from the recall scores
 POS_TO_IGNORE = {"ADP", "PART", "CCONJ", "DET"}
 TOKENS_TO_IGNORE = {"hr", "fru", "nr"}
@@ -67,7 +21,10 @@ CHARACTERS_TO_IGNORE = " ,.-;:/&()[]–'\" ’“”"
 
 
 class TokenWeighting:
-    """Abstract class for token weighting schemes (used to compute the precision)"""
+    """
+    Abstract class for token weighting schemes used to compute precision.
+    Subclasses must implement the `get_weights` method.
+    """
 
     @abc.abstractmethod
     def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
@@ -84,23 +41,27 @@ class TokenWeighting:
 
 
 class UniformTokenWeighting(TokenWeighting):
-    """Uniform weighting (all tokens assigned to a weight of 1.0)"""
+    """
+    Uniform weighting scheme where all tokens are assigned a weight of 1.0.
+    """
 
     def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
         return [1.0] * len(text_spans)
 
 
 class DanskBertTokenWeighting(TokenWeighting):
-    """Token weighting based on the DanskBERT language model. The weighting mechanism
-    runs the model on a text in which the provided spans are masked. The
-    weight of each token is then defined as 1-(probability of the actual token value).
-
-    In other words, a token that is difficult to predict will have a high
-    information content, and therefore a high weight, whereas a token which can
-    be predicted from its content will received a low weight."""
+    """
+    Token weighting based on the DanskBERT language model. Assigns weights
+    based on the difficulty of predicting masked tokens using the model.
+    """
 
     def __init__(self, max_segment_size=100):
-        """Initialises the DanskBERT tokenizers and masked language model"""
+        """
+        Initializes the DanskBERT tokenizer and masked language model.
+
+        Args:
+            max_segment_size (int): Maximum segment size for processing long texts.
+        """
 
         self.tokeniser = AutoTokenizer.from_pretrained("vesteinn/DanskBERT")
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -109,12 +70,17 @@ class DanskBertTokenWeighting(TokenWeighting):
         self.max_segment_size = max_segment_size
 
     def get_weights(self, text: str, text_spans: List[Tuple[int, int]]):
-        """Returns a list of numeric weights between 0 and 1, where each value
-        corresponds to 1 - (probability of predicting the value of the text span
-        according to the DanskBERT model).
+        """
+        Computes weights for text spans based on their predictability using DanskBERT.
 
-        If the span corresponds to several DanskBERT tokens, the probability is the
-        product of the probabilities for each token."""
+        Args:
+            text (str): The input text.
+            text_spans (List[Tuple[int, int]]): List of character spans to evaluate.
+
+        Returns:
+            List[float]: Weights for each span, where higher weights indicate
+            higher information content.
+        """
 
         # STEP 1:  tokenise the text
         bert_tokens = self.tokeniser(text, return_offsets_mapping=True)
@@ -164,9 +130,16 @@ class DanskBertTokenWeighting(TokenWeighting):
         return weights
 
     def _get_tokens_by_span(self, bert_token_spans, text_spans):
-        """Given two lists of spans (one with the spans of the DanskBERT tokens, and one with
-        the text spans to weight), returns a dictionary where each text span is associated
-        with the indices of the DanskBERT tokens it corresponds to."""
+        """
+        Maps text spans to their corresponding BERT token indices.
+
+        Args:
+            bert_token_spans (List[Tuple[int, int]]): Spans of BERT tokens.
+            text_spans (List[Tuple[int, int]]): Spans of text to map.
+
+        Returns:
+            Dict[Tuple[int, int], List[int]]: Mapping of text spans to token indices.
+        """
 
         #  create an interval tree to facilitate the mapping
         text_spans_tree = intervaltree.IntervalTree()
@@ -186,12 +159,16 @@ class DanskBertTokenWeighting(TokenWeighting):
         return tokens_by_span
 
     def _get_model_predictions(self, input_ids, attention_mask):
-        """Given tokenised input identifiers and an associated attention mask (where the
-        tokens to predict have a mask value set to 0), runs the DanskBERT model and returns
-        the (unnormalised) prediction scores for each token.
+        """
+        Runs the DanskBERT model on tokenized inputs and returns prediction scores.
 
-        If the input length is longer than max_segment size,  split the document in
-        small segments, and then concatenate the model predictions for each segment."""
+        Args:
+            input_ids (List[int]): Tokenized input IDs.
+            attention_mask (List[int]): Attention mask for the input.
+
+        Returns:
+            torch.Tensor: Logits from the model for each token.
+        """
 
         nb_tokens = len(input_ids)
 
@@ -235,8 +212,9 @@ class DanskBertTokenWeighting(TokenWeighting):
 
 
 class MaskedDocument:
-    """Represents a document in which some text spans are masked, each span
-    being expressed by their (start, end) character boundaries"""
+    """
+    Represents a document with masked text spans, identified by character boundaries.
+    """
 
     def __init__(self, doc_id: str, masked_spans: List[Tuple[int, int]]):
         self.doc_id = doc_id
@@ -244,7 +222,12 @@ class MaskedDocument:
         self.masked_offsets = None
 
     def get_masked_offsets(self):
-        """Returns the character offsets that are masked"""
+        """
+        Computes and returns the character offsets that are masked.
+
+        Returns:
+            set: Set of masked character offsets.
+        """
         if self.masked_offsets is None:
             self.masked_offsets = {
                 i for start, end in self.masked_spans for i in range(start, end)
@@ -253,9 +236,10 @@ class MaskedDocument:
 
 
 class AnnotatedEntity:
-    """Represents an entity annotated in a document, with a unique identifier,
-    a list of mentions (character-level spans in the document), whether it
-    needs to be masked, and whether it corresponds to a direct identifier"""
+    """
+    Represents an annotated entity in a document, including its mentions,
+    masking requirements, and type.
+    """
 
     def __init__(
         self,
@@ -278,7 +262,12 @@ class AnnotatedEntity:
 
     @property
     def mentions_to_mask(self):
-        """Returns a list of mentions that need to be masked."""
+        """
+        Retrieves mentions that need to be masked.
+
+        Returns:
+            List[Tuple[int, int]]: List of mentions requiring masking.
+        """
         return [
             mention
             for i, mention in enumerate(self.mentions)
@@ -291,8 +280,10 @@ class AnnotatedEntity:
 
 
 class GoldCorpus:
-    """Representation of a gold standard corpus for text anonymisation, extracted from a
-    JSON file."""
+    """
+    Represents a gold standard corpus for text anonymization, loaded from a JSON file.
+    Provides methods for evaluating masked spans against the gold standard.
+    """
 
     def __init__(self, gold_standard_json_file: str, spacy_model="da_core_news_trf"):
 
@@ -356,17 +347,17 @@ class GoldCorpus:
     def get_entity_recall(
         self, masked_docs: List[MaskedDocument], include_direct=True, include_quasi=True
     ):
-        """Returns the entity-level recall of the masked spans when compared to the gold
-        standard annotations. Arguments:
-        - masked_docs: documents together with spans masked by the system
-        - include_direct: whether to include direct identifiers in the metric
-        - include_quasi: whether to include quasi identifiers in the metric
+        """
+        Computes entity-level recall for masked spans.
 
-        The recall is computed at the level of entities and not mentions, and  consider
-        an entity to be masked only if all of its mentions are masked.
+        Args:
+            masked_docs (List[MaskedDocument]): Documents with masked spans.
+            include_direct (bool): Include direct identifiers in the metric.
+            include_quasi (bool): Include quasi identifiers in the metric.
 
-        If annotations from several annotators are available for a given document, the recall
-        corresponds to a micro-average over the annotators."""
+        Returns:
+            float: Entity-level recall.
+        """
 
         nb_masked_entities = 0
         nb_entities = 0
@@ -395,17 +386,18 @@ class GoldCorpus:
         include_quasi=True,
         token_level: bool = True,
     ):
-        """Returns the mention or token-level recall of the masked spans when compared
-        to the gold standard annotations.
+        """
+        Computes recall at the token or mention level.
 
-        Arguments:
-        - masked_docs: documents together with spans masked by the system
-        - include_direct: whether to include direct identifiers in the metric
-        - include_quasi: whether to include quasi identifiers in the metric
-        - token_level: whether to compute the recall at the level of tokens or mentions
+        Args:
+            masked_docs (List[MaskedDocument]): Documents with masked spans.
+            include_direct (bool): Include direct identifiers in the metric.
+            include_quasi (bool): Include quasi identifiers in the metric.
+            token_level (bool): Compute recall at the token level if True, otherwise mention level.
 
-        If annotations from several annotators are available for a given document, the recall
-        corresponds to a micro-average over the annotators."""
+        Returns:
+            float: Recall value.
+        """
 
         nb_masked_by_type, nb_by_type = self._get_mask_counts(
             masked_docs, include_direct, include_quasi, token_level
@@ -426,17 +418,18 @@ class GoldCorpus:
         include_quasi=True,
         token_level: bool = True,
     ):
-        """Returns the mention or token-level recall of the masked spans when compared
-        to the gold standard annotations, and factored by entity type.
+        """
+        Computes recall per entity type at the token or mention level.
 
-        Arguments:
-        - masked_docs: documents together with spans masked by the system
-        - include_direct: whether to include direct identifiers in the metric
-        - include_quasi: whether to include quasi identifiers in the metric
-        - token_level: whether to compute the recall at the level of tokens or mentions
+        Args:
+            masked_docs (List[MaskedDocument]): Documents with masked spans.
+            include_direct (bool): Include direct identifiers in the metric.
+            include_quasi (bool): Include quasi identifiers in the metric.
+            token_level (bool): Compute recall at the token level if True, otherwise mention level.
 
-        If annotations from several annotators are available for a given document, the recall
-        corresponds to a micro-average over the annotators."""
+        Returns:
+            Dict[str, float]: Recall values per entity type.
+        """
 
         nb_masked_by_type, nb_by_type = self._get_mask_counts(
             masked_docs, include_direct, include_quasi, token_level
@@ -492,11 +485,15 @@ class GoldCorpus:
         include_partial_match=True,
         include_no_match=True,
     ):
-        """Prints out the false negatives (mentions that should have been masked but
-        haven't) to facilitate error analysis.
-        If include_partial_match is set to True,  include mentions which are partially
-        masked. If include_no_match is set to True,  include mentions that are not
-        masked at all.
+        """
+        Displays false negatives (mentions that should have been masked but weren't).
+
+        Args:
+            masked_docs (List[MaskedDocument]): Documents with masked spans.
+            include_direct (bool): Include direct identifiers in the analysis.
+            include_quasi (bool): Include quasi identifiers in the analysis.
+            include_partial_match (bool): Include partially masked mentions.
+            include_no_match (bool): Include mentions not masked at all.
         """
 
         if not include_partial_match and not include_no_match:
@@ -540,16 +537,17 @@ class GoldCorpus:
         token_weighting: TokenWeighting,
         token_level: bool = True,
     ):
-        """Returns the weighted, token-level precision of the masked spans when compared
-        to the gold standard annotations. Arguments:
-        - masked_docs: documents together with spans masked by the system
-        - token_weighting: mechanism for weighting the information content of each token
+        """
+        Computes weighted precision for masked spans.
 
-        If token_level is set to true, the precision is computed at the level of tokens,
-        otherwise the precision is at the mention-level. The masked spans/tokens are weighted
-        by their information content, given the provided weighting scheme. If annotations from
-        several annotators are available for a given document, the precision corresponds to a
-        micro-average over the annotators."""
+        Args:
+            masked_docs (List[MaskedDocument]): Documents with masked spans.
+            token_weighting (TokenWeighting): Token weighting scheme.
+            token_level (bool): Compute precision at the token level if True, otherwise mention level.
+
+        Returns:
+            float: Precision value.
+        """
 
         weighted_true_positives = 0.0
         weighted_system_masks = 0.0
@@ -589,7 +587,10 @@ class GoldCorpus:
 
 
 class GoldDocument:
-    """Representation of an annotated document"""
+    """
+    Represents an annotated document with text, annotations, and methods
+    for evaluating masking against the gold standard.
+    """
 
     def __init__(
         self,
@@ -702,8 +703,16 @@ class GoldDocument:
         return list(entities.values())
 
     def is_masked(self, masked_doc: MaskedDocument, entity: AnnotatedEntity):
-        """Given a document with a set of masked text spans, determines whether entity
-        is fully masked (which means that all its mentions are masked)"""
+        """
+        Checks if an entity is fully masked in the document.
+
+        Args:
+            masked_doc (MaskedDocument): Document with masked spans.
+            entity (AnnotatedEntity): Entity to check.
+
+        Returns:
+            bool: True if the entity is fully masked, False otherwise.
+        """
 
         for incr, (mention_start, mention_end) in enumerate(entity.mentions):
 
@@ -719,9 +728,17 @@ class GoldDocument:
     def is_mention_masked(
         self, masked_doc: MaskedDocument, mention_start: int, mention_end: int
     ):
-        """Given a document with a set of masked text spans and a particular mention span,
-        determine whether the mention is fully masked (taking into account special
-        characters or tokens to skip)"""
+        """
+        Checks if a mention is fully masked in the document.
+
+        Args:
+            masked_doc (MaskedDocument): Document with masked spans.
+            mention_start (int): Start character offset of the mention.
+            mention_end (int): End character offset of the mention.
+
+        Returns:
+            bool: True if the mention is fully masked, False otherwise.
+        """
 
         mention_to_mask = self.text[mention_start:mention_end].lower()
 
@@ -748,8 +765,16 @@ class GoldDocument:
         return len(non_covered_offsets) == 0
 
     def get_entities_to_mask(self, include_direct=True, include_quasi=True):
-        """Return entities that should be masked, and satisfy the constraints
-        specified as arguments"""
+        """
+        Retrieves entities that should be masked based on the specified criteria.
+
+        Args:
+            include_direct (bool): Include direct identifiers.
+            include_quasi (bool): Include quasi identifiers.
+
+        Returns:
+            List[AnnotatedEntity]: Entities to be masked.
+        """
 
         to_mask = []
         for entity in self.entities.values():
@@ -766,9 +791,16 @@ class GoldDocument:
         return to_mask
 
     def get_annotators_for_span(self, start_token: int, end_token: int):
-        """Given a text span (typically for a token), determines which annotators
-        have also decided to mask it. Concretely, the method returns a (possibly
-        empty) set of annotators names that have masked that span."""
+        """
+        Retrieves annotators who masked a specific text span.
+
+        Args:
+            start_token (int): Start character offset of the span.
+            end_token (int): End character offset of the span.
+
+        Returns:
+            set: Set of annotator IDs.
+        """
 
         #  compute an interval tree for fast retrieval
         if not hasattr(self, "masked_spans"):
@@ -791,7 +823,16 @@ class GoldDocument:
         return annotators
 
     def split_by_tokens(self, start: int, end: int):
-        """Generates the (start, end) boundaries of each token included in this span"""
+        """
+        Splits a text span into individual tokens.
+
+        Args:
+            start (int): Start character offset of the span.
+            end (int): End character offset of the span.
+
+        Yields:
+            Tuple[int, int]: Start and end offsets of each token.
+        """
 
         for match in re.finditer(r"\w+", self.text[start:end]):
             start_token = start + match.start(0)
@@ -803,9 +844,70 @@ class GoldDocument:
         return f"{self.__class__.__name__}({attrs})"
 
 
+def parse_arguments():
+    """
+    Parses command-line arguments for the benchmark script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments including paths to input/output files,
+        evaluation options, and verbosity settings.
+    """
+
+    parser = argparse.ArgumentParser(
+        description="Computes evaluation metrics for the Danish Text Anonymisation benchmark."
+    )
+
+    parser.add_argument(
+        "--gold_standard_file",
+        type=str,
+        default="./data/DAB_annotated_dataset.json",
+        help="the path to the JSON file containing the gold standard annotations",
+    )
+    parser.add_argument(
+        "--model_predictions_file",
+        type=str,
+        default="./output/predictions/DaAnonymization_predictions.json",
+        help="the path to the file containing JSON files with actual spans masked by the system",
+    )
+    parser.add_argument(
+        "--benchmark_output_file",
+        type=str,
+        default="./output/benchmarks/DaAnonymization_benchmark_result.txt",
+        help="The directory to save the benchmark results in",
+    )
+    parser.add_argument(
+        "--bert_weighting",
+        action="store_true",
+        default=True,
+        help="Whether to calculate DanskBERT-weighted precision in addition to uniform.",
+    )
+    parser.add_argument(
+        "--only_docs",
+        default=None,
+        nargs="*",
+        help="list of document identifiers on which to focus the evaluation "
+        + "(if not specified, computes the evaluation measures for all documents)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="provides detailed evaluation results (defaults to false)",
+    )
+
+    return parser.parse_args()
+
+
 def get_masked_docs_from_file(masked_output_file: str):
-    """Given a file path for a JSON file containing the spans to be masked for
-    each document, returns a list of MaskedDocument objects"""
+    """
+    Loads masked documents from a JSON file.
+
+    Args:
+        masked_output_file (str): Path to the JSON file containing masked spans.
+
+    Returns:
+        List[MaskedDocument]: List of MaskedDocument objects.
+    """
 
     fd = open(masked_output_file)
     masked_output_docs = json.load(fd)
@@ -841,7 +943,7 @@ def get_masked_docs_from_file(masked_output_file: str):
     return masked_docs
 
 
-if __name__ == "__main__":
+def main():
 
     args = parse_arguments()
 
@@ -921,3 +1023,7 @@ if __name__ == "__main__":
         encoding="utf-8",
     ) as f:
         f.write(output)
+
+
+if __name__ == "__main__":
+    main()

@@ -13,6 +13,12 @@ a function not currently supported in DaAnonymization.
 
 
 def parse_arguments():
+    """
+    Parses command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments including data_path, save_path, and fine_grained flag.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for generating masks for anonymization using DaCy models."
     )
@@ -20,7 +26,7 @@ def parse_arguments():
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
-        default="./data/annotations_15_04_2025.json",
+        default="./data/DAB_annotated_dataset.json",
         required=False,
     )
     parser.add_argument(
@@ -41,7 +47,15 @@ def parse_arguments():
 
 
 def load_data(data_path):
+    """
+    Loads data from a JSON file.
 
+    Args:
+        data_path (str): Path to the JSON file.
+
+    Returns:
+        list: List of data entries loaded from the JSON file.
+    """
     with open(data_path, "r", encoding="utf-8") as doc:
         data = json.load(doc)
 
@@ -49,7 +63,15 @@ def load_data(data_path):
 
 
 def instantiate_model(fine_grained):
+    """
+    Instantiates the DaCy model and tokenizer.
 
+    Args:
+        fine_grained (bool): Whether to use the fine-grained NER model.
+
+    Returns:
+        tuple: Tokenizer and DaCy model.
+    """
     tokenizer = AutoTokenizer.from_pretrained(
         "vesteinn/DanskBERT",
         clean_up_tokenization_spaces=True,
@@ -69,6 +91,16 @@ def instantiate_model(fine_grained):
 
 
 def dacy_pipeline(text, model):
+    """
+    Processes text using the DaCy model to extract entities and offsets.
+
+    Args:
+        text (str): Input text to process.
+        model (dacy.Model): DaCy model.
+
+    Returns:
+        tuple: List of masked entities and their offsets.
+    """
     doc = model(text)
 
     masked_entities = []
@@ -88,7 +120,16 @@ def dacy_pipeline(text, model):
 
 
 def mask_dacy_predictions(text, dacy_offsets):
+    """
+    Masks text based on DaCy offsets.
 
+    Args:
+        text (str): Input text to mask.
+        dacy_offsets (list): List of offsets to mask.
+
+    Returns:
+        str: Masked text.
+    """
     dacy_text = text
 
     for start, end in dacy_offsets:
@@ -104,7 +145,17 @@ def mask_dacy_predictions(text, dacy_offsets):
 
 
 def regex_pipeline(text, dacy_text, dacy_offsets):
+    """
+    Applies regex patterns to identify additional entities and mask them.
 
+    Args:
+        text (str): Original text.
+        dacy_text (str): Text already masked by DaCy.
+        dacy_offsets (list): Offsets from DaCy.
+
+    Returns:
+        tuple: Combined offsets and fully masked text.
+    """
     cpr_pattern = "|".join(
         [r"[0-3]\d{1}[0-1]\d{3}-\d{4}", r"[0-3]\d{1}[0-1]\d{3} \d{4}"]
     )
@@ -161,6 +212,17 @@ def regex_pipeline(text, dacy_text, dacy_offsets):
 
 
 def tokenize_and_chunk_text(text, tokenizer, max_length=512):
+    """
+    Tokenizes and chunks text into smaller segments.
+
+    Args:
+        text (str): Input text to tokenize and chunk.
+        tokenizer (transformers.AutoTokenizer): Tokenizer to use.
+        max_length (int): Maximum length of each chunk.
+
+    Returns:
+        list: List of chunks with tokenized data.
+    """
     # Tokenize
     tokens = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
 
@@ -192,6 +254,16 @@ def tokenize_and_chunk_text(text, tokenizer, max_length=512):
 
 
 def pipeline_to_chunks(chunks, model):
+    """
+    Processes text chunks through the DaCy pipeline and regex pipeline.
+
+    Args:
+        chunks (list): List of text chunks.
+        model (dacy.Model): DaCy model.
+
+    Returns:
+        tuple: Combined offsets and fully masked text.
+    """
     all_offsets = []
     all_masked_text = ""
 
@@ -216,7 +288,13 @@ def pipeline_to_chunks(chunks, model):
 
 
 def save_json(data, save_path):
+    """
+    Saves data to a JSON file.
 
+    Args:
+        data (list): Data to save.
+        save_path (str): Path to save the JSON file.
+    """
     json_object = json.dumps(data, indent=2)
 
     with open(save_path, "w", encoding="utf-8") as outfile:
@@ -224,6 +302,10 @@ def save_json(data, save_path):
 
 
 def main():
+    """
+    Main function to execute the script. Parses arguments, loads data, processes it using DaCy,
+    and saves the output.
+    """
     args = parse_arguments()
     data_list = load_data(args.data_path)
     tokenizer, model = instantiate_model(args.fine_grained)
@@ -244,7 +326,7 @@ def main():
 
         output_format = [masked_offsets, masked_text]
 
-        print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
+        print(f"[INFO]: Masked output generated for document: {entry_dict['id']}")
         print(f"[INFO]: Masked document: {all_masked_text}")
 
     save_json(output_format, args.save_path)

@@ -6,8 +6,17 @@ import re
 from transformers import pipeline
 import torch
 
+# Constants
+PROMPT_PATH = "./src/predict/hf_pipeline_instruction_prompt.txt"
+
 
 def parse_arguments():
+    """
+    Parses command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Parsed arguments including data_path, save_path, model_name, and device.
+    """
     parser = argparse.ArgumentParser(
         description="This script is used for generating masks for anonymization using any Hugging Face model."
     )
@@ -15,7 +24,7 @@ def parse_arguments():
         "--data_path",
         type=str,
         help="The path to the annotated dataset in Label Studio JSON format.",
-        default="./data/annotations_15_04_2025.json",
+        default="./data/DAB_annotated_dataset.json",
         required=False,
     )
     parser.add_argument(
@@ -42,12 +51,31 @@ def parse_arguments():
 
 
 def load_data(data_path):
+    """
+    Loads data from a JSON file.
+
+    Args:
+        data_path (str): Path to the JSON file.
+
+    Returns:
+        list: List of data entries loaded from the JSON file.
+    """
     with open(data_path, "r", encoding="utf-8") as doc:
         data_list = json.load(doc)
     return data_list
 
 
 def instantiate_pipeline(model_name, device):
+    """
+    Instantiates a Hugging Face text-generation pipeline.
+
+    Args:
+        model_name (str): Name of the Hugging Face model to use.
+        device (str): Device to run the model on ('cpu' or 'cuda').
+
+    Returns:
+        transformers.Pipeline: Hugging Face pipeline object.
+    """
     print(f"[INFO]: Loading model '{model_name}' on device '{device}'...")
     pipe = pipeline(
         "text-generation",
@@ -59,6 +87,15 @@ def instantiate_pipeline(model_name, device):
 
 
 def process_model_output(text):
+    """
+    Processes the model output to replace masked spans with asterisks and extract offsets.
+
+    Args:
+        text (str): Text containing masked spans in the format [[[masked_text]]].
+
+    Returns:
+        tuple: Processed text with masked spans replaced and a list of offsets.
+    """
     spans = []
     new_text_parts = []
     current_pos = 0
@@ -92,27 +129,34 @@ def process_model_output(text):
     return new_text, spans
 
 
-def generate_output(text, pipe):
-    instruction_prompt = """Instruction:
+def import_prompt():
+    """
+    Imports the instruction prompt from a text file.
 
-You are a GDPR text anonymization assistant. Your job is to anonymize Danish text by masking character spans containing personal information, as to ensure that none of the people mentioned in the text can be directly or indirectly identified. You should disregard the notion of publicly available knowledge and consider all direct and indirect identifiers as personal information. To mask a character span in the text, mark it in triple hard brackets.
+    Returns:
+        str: Instruction prompt as a string.
+    """
+    # Get instruction prompt from .txt file
+    with open(PROMPT_PATH, "r", encoding="utf-8") as f:
+        instruction_prompt = f.read()
 
-Here is an example:
+    return instruction_prompt
 
-Text:
 
-Du kan prøve at ringe til Mogens Petersen, han har tlf nr 80 90 31 23. Han driver en barbershop og bor selv i centrum af Hillerød.
+def generate_output(text, pipe, instruction_prompt):
+    """
+    Generates output text using the Hugging Face pipeline.
 
-Output:
+    Args:
+        text (str): Input text to process.
+        pipe (transformers.Pipeline): Hugging Face pipeline object.
+        instruction_prompt (str): Instruction prompt to prepend to the input text.
 
-Du kan prøve at ringe til [[[Mogens Petersen]]], han har tlf nr [[[80 90 31 23]]]. Han ejer en [[[barbershop]]] og bor selv i [[[centrum af Hillerød]]].
-
-Now it's your turn.
-
-"""
-
+    Returns:
+        str: Generated output text.
+    """
+    # Combine instruction and user prompt
     user_prompt = f"Text:\n\n{text}\n\nOutput:\n\n"
-
     full_prompt = instruction_prompt + user_prompt
     output = pipe(full_prompt, return_full_text=False, max_new_tokens=8192)
     output_text = output[0]["generated_text"]
@@ -121,16 +165,27 @@ Now it's your turn.
 
 
 def save_json(data_list, save_path):
+    """
+    Saves data to a JSON file.
 
+    Args:
+        data_list (list): Data to save.
+        save_path (str): Path to save the JSON file.
+    """
     json_object = json.dumps(data_list, indent=2)
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
 
 
 def main():
+    """
+    Main function to execute the script. Parses arguments, loads data, processes it using a model,
+    and saves the output.
+    """
     args = parse_arguments()
     data_list = load_data(args.data_path)
     pipe = instantiate_pipeline(args.model_name, args.device)
+    instruction_prompt = import_prompt()
 
     masked_offsets = {}
     masked_text = {}
@@ -140,7 +195,7 @@ def main():
 
         print(f"[INFO]: Generating mask for document {entry_dict['id']}...")
 
-        output_text = generate_output(text, pipe)
+        output_text = generate_output(text, pipe, instruction_prompt)
         all_masked_text, all_offsets = process_model_output(output_text)
 
         masked_offsets[entry_dict["id"]] = all_offsets
