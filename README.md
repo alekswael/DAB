@@ -29,6 +29,8 @@ This project was developed for Python 3.12.3.
     bash setup.sh
     ```
 
+    **NOTE:** To use this project, you must be authenticated with the Hugging Face Hub. Please ensure you have a Hugging Face account and an access token. You can log in by running `huggingface-cli login` and following the instructions (see the [documention](https://huggingface.co/docs/huggingface_hub/en/guides/cli) for help).
+
 ## 👩‍💻 Usage
 
 ### 📊 Benchmark an anonymization model
@@ -39,7 +41,7 @@ This project was developed for Python 3.12.3.
 
     1. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large_ (simple, adapted version for this project)
     2. [*DaAnonymization*](https://github.com/martincjespersen/DaAnonymization) with _DaCy large fine-grained_ (simple, adapted version for this project)
-    3. [_google/gemma-3-12b-it_](https://huggingface.co/google/gemma-3-12b-it), implemented through HuggingFace
+    3. [_google/gemma-3-12b-it_](https://huggingface.co/google/gemma-3-12b-it), implemented through 🤗 Hugging Face (locally) or Google's API (cloud based)
 
     To generate predictions for these models, you can run the `predict_masks.sh` script:
 
@@ -47,18 +49,24 @@ This project was developed for Python 3.12.3.
     bash predict_masks.sh
     ```
 
-    There is also support for generating masks by prompting an instruction-tuned model hosted on 🤗 HuggingFace. To do this, you can run the `hf_pipeline_predict.py` script and specify the model_name:
+    You can add the `--cloud` flag when running `gemma_predict.py` in `predict_masks.sh` if you want to run Gemma through Google's API - make sure to set the `GOOGLE_API_KEY` environment variable in a `.env` file.
+
+    **Instruction-tuned models from 🤗 Hugging Face**
+
+    There is also support for generating masks by prompting an instruction-tuned model hosted on 🤗 Hugging Face. To do this, you can run the `hf_pipeline_predict.py` script and specify the `--model_name` flag:
 
     ```bash
     python3 src/predict/hf_pipeline_predict.py \
       --data_path "./data/annotations_15_04_2025.json" \
-      --save_path "./output/predictions/" \
-      --model_name "google/gemma-3-4b-it"
+      --save_path "./output/predictions/gemma_3_1b_it_predictions.json" \
+      --model_name "google/gemma-3-1b-it"
     ```
-    
-    To use this project, you must be authenticated with the Hugging Face Hub. Please ensure you have a Hugging Face account and an access token. You can log in by running `huggingface-cli login` and following the instructions (see this site for help). You can view/change the instruction prompt in the `hf_pipeline_predict.py` script. 
 
-    ***NOTE:*** *If you want to generate predictions with a different model, make sure to save the output with the correct formatting. See the model prediction JSON reference in the [formatting reference](annotation/JSON_format_reference.md) for more information.*
+    You can view/change the instruction prompt in the `hf_pipeline_instruction_prompt.txt` file (this prompt is also used when prompting *google/gemma-3-12b-it*).
+
+    🕵️ **Other anonymization models**
+    
+    If you want to generate predictions with a different model, make sure to save the output with the correct formatting. See the model prediction JSON reference in the [formatting reference](annotation/JSON_format_reference.md) for more information.
 
 2. 📋️ **Model evaluation**
 
@@ -72,11 +80,10 @@ This project was developed for Python 3.12.3.
 
     ```bash
     python3 src/benchmark/benchmark_model.py \
-      --gold_standard_file "./data/annotations_15_04_2025.json" \
-      --masked_output_dir "./output/predictions/" \
-      --benchmark_output_dir "./output/benchmarks/" \
-      --model "DaAnonymization" \
-      --bert_weighting
+    --gold_standard_file "./data/annotations_15_04_2025.json" \
+    --model_predictions_file "./output/predictions/mymodel_predictions.json" \
+    --benchmark_output_file "./output/benchmarks/mymodel_benchmark_result.txt" \
+    --bert_weighting
     ```
 
 ### 🌐 Expand the dataset and annotate new documents

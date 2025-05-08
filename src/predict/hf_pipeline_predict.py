@@ -22,8 +22,7 @@ def parse_arguments():
         "--save_path",
         type=str,
         help="The path for saving the predictions.",
-        default="./output/predictions/",
-        required=False,
+        required=True,
     )
     parser.add_argument(
         "--model_name",
@@ -121,12 +120,7 @@ Now it's your turn.
     return output_text
 
 
-def save_json(data_list, model_name, save_path):
-
-    # Change the / in the model_name to _ for the filename
-    model_name = model_name.replace("/", "_")
-
-    save_path = f"{save_path}{model_name}_predictions.json"
+def save_json(data_list, save_path):
 
     json_object = json.dumps(data_list, indent=2)
     with open(save_path, "w", encoding="utf-8") as outfile:
@@ -157,7 +151,7 @@ def main():
         print(f"[INFO]: Masked output generated for document: {entry_dict['id']}")
         print(f"[INFO]: Masked document: {all_masked_text}")
 
-    save_json(output_format, args.model_name, args.save_path)
+    save_json(output_format, args.save_path)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# dataset files
+data/DAB_dataset_pre_annotated.json
+data/DAB_dataset.json
+
 # C extensions
 *.so
 

@@ -27,7 +27,7 @@ def parse_arguments():
         "--save_path",
         type=str,
         help="The directory for saving the predictions.",
-        default="./output/predictions/",
+        default="./output/predictions/DaAnonymization_predictions.json",
         required=False,
     )
     parser.add_argument(
@@ -215,15 +215,9 @@ def pipeline_to_chunks(chunks, model):
     return all_offsets, all_masked_text
 
 
-def save_json(data, save_path, fine_grained):
+def save_json(data, save_path):
 
     json_object = json.dumps(data, indent=2)
-
-    if fine_grained:
-        save_path += "DaAnonymization_FG_predictions.json"
-
-    else:
-        save_path += "DaAnonymization_predictions.json"
 
     with open(save_path, "w", encoding="utf-8") as outfile:
         outfile.write(json_object)
@@ -253,7 +247,7 @@ def main():
         print(f"[INFO]: Masked output generated for document: {entry_dict["id"]}")
         print(f"[INFO]: Masked document: {all_masked_text}")
 
-    save_json(output_format, args.save_path, args.fine_grained)
+    save_json(output_format, args.save_path)
 
 
 if __name__ == "__main__":

@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -53,6 +51,7 @@ def instantiate_pipeline(cloud):
 
     if cloud == True:
         print(f"[INFO]: Running model through Google's API...")
+        api_key = os.getenv("GOOGLE_API_KEY")
         pipe = genai.Client(api_key=api_key)
 
     else:
@@ -159,27 +158,11 @@ Now it's your turn.
 
 """
 
-        user_prompt = f"""Text:
+        user_prompt = f"Text:\n\n{text}\n\nOutput:\n\n"
 
-{text}
-
-Output:
-
-
-"""
-
-        messages = [
-            {
-                "role": "system",
-                "content": [{"type": "text", "text": instruction_prompt}],
-            },
-            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
-        ]
-
-        output = pipe(text=messages)
-        output_text = output[0]["generated_text"][-1]["content"]
-
-        print(output_text)
+        full_prompt = instruction_prompt + user_prompt
+        output = pipe(full_prompt, return_full_text=False, max_new_tokens=8192)
+        output_text = output[0]["generated_text"]
 
         return output_text
 

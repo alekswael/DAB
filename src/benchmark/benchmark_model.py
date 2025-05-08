@@ -32,16 +32,10 @@ def parse_arguments():
         help="the path to the file containing JSON files with actual spans masked by the system",
     )
     parser.add_argument(
-        "--benchmark_output_dir",
+        "--benchmark_output_file",
         type=str,
-        default="./output/benchmarks/",
+        default="./output/benchmarks/DaAnonymization_benchmark_result.txt",
         help="The directory to save the benchmark results in",
-    )
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="DaAnonymization",
-        help="The model name to be benchmarked - choose between DaAnonymization, DaAnonymization_FG, Gemma",
     )
     parser.add_argument(
         "--bert_weighting",
@@ -922,7 +916,7 @@ if __name__ == "__main__":
 
     # Save benchmark result
     with open(
-        f"{args.benchmark_output_dir}{args.model}_benchmark_result.txt",
+        args.benchmark_output_file,
         "w",
         encoding="utf-8",
     ) as f:

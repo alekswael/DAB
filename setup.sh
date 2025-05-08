@@ -4,17 +4,18 @@ REQUIRED_VERSION="3.12"
 
 # Try to find a python3.12 executable
 if command -v python3.12 &> /dev/null; then
-    PYTHON_BIN=$(command -v python3.12)
+    PYTHON=$(command -v python3.12)
+    echo "Python version: $PYTHON"
 else
     # Fallback to python3
-    PYTHON_BIN=$(command -v python3)
-    if [ -z "$PYTHON_BIN" ]; then
+    PYTHON=$(command -v python3)
+    if [ -z "$PYTHON" ]; then
         echo "Python 3 is not installed."
         exit 1
     fi
 
     # Check version
-    VERSION=$($PYTHON_BIN -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    VERSION=$($PYTHON -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     if [ "$VERSION" != "$REQUIRED_VERSION" ]; then
         echo "Error: Python $REQUIRED_VERSION is required, but found $VERSION."
         exit 1

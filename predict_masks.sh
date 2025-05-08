@@ -16,18 +16,21 @@ source "$VENV_DIR/bin/activate"
 # Predict masks with models
 echo "Predicting masks..."
 
+# DaAnonymization
 $PYTHON src/predict/DaAnonymization_predict.py \
 --data_path "./data/annotations_15_04_2025.json" \
---save_path "./output/predictions/"
+--save_path "./output/predictions/DaAnonymization_predictions.json"
 
+# DaAnonymization with fine-grained predictions
 $PYTHON src/predict/DaAnonymization_predict.py \
 --data_path "./data/annotations_15_04_2025.json" \
---save_path "./output/predictions/" \
+--save_path "./output/predictions/DaAnonymization_FG_predictions.json" \
 --fine_grained
 
+# Gemma
 $PYTHON src/predict/gemma_predict.py \
 --data_path "./data/annotations_15_04_2025.json" \
---save_path "./output/predictions/" 
+--save_path "./output/predictions/Gemma_predictions.json" 
 
 # Deactivate the virtual environment
 deactivate
