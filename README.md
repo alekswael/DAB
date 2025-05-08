@@ -16,6 +16,8 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
 
 ## 🔧 Setup
 
+This project was developed for Python 3.12.3.
+
 1. Clone the repository:
     ```bash
     git clone https://github.com/alekswael/DAB
@@ -53,7 +55,8 @@ The _Danish Anonymization Benchmark_ (DAB) is a GDPR-oriented, open-source bench
       --save_path "./output/predictions/" \
       --model_name "google/gemma-3-4b-it"
     ```
-    You can view/change the instruction prompt in the `hf_pipeline_predict.py` script.
+    
+    To use this project, you must be authenticated with the Hugging Face Hub. Please ensure you have a Hugging Face account and an access token. You can log in by running `huggingface-cli login` and following the instructions (see this site for help). You can view/change the instruction prompt in the `hf_pipeline_predict.py` script. 
 
     ***NOTE:*** *If you want to generate predictions with a different model, make sure to save the output with the correct formatting. See the model prediction JSON reference in the [formatting reference](annotation/JSON_format_reference.md) for more information.*
 

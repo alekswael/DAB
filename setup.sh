@@ -1,10 +1,24 @@
 #!/bin/bash
 
-# Check for python version
-if command -v python3 &>/dev/null; then
-    PYTHON=python3
+REQUIRED_VERSION="3.12"
+
+# Try to find a python3.12 executable
+if command -v python3.12 &> /dev/null; then
+    PYTHON_BIN=$(command -v python3.12)
 else
-    PYTHON=python
+    # Fallback to python3
+    PYTHON_BIN=$(command -v python3)
+    if [ -z "$PYTHON_BIN" ]; then
+        echo "Python 3 is not installed."
+        exit 1
+    fi
+
+    # Check version
+    VERSION=$($PYTHON_BIN -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    if [ "$VERSION" != "$REQUIRED_VERSION" ]; then
+        echo "Error: Python $REQUIRED_VERSION is required, but found $VERSION."
+        exit 1
+    fi
 fi
 
 # Set the virtual environment directory name

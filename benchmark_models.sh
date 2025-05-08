@@ -18,21 +18,21 @@ echo "Benchmarking models..."
 
 $PYTHON src/benchmark/benchmark_model.py \
 --gold_standard_file "./data/annotations_15_04_2025.json" \
---masked_output_dir "./output/predictions/" \
+--masked_output_file "./output/predictions/" \
 --benchmark_output_dir "./output/benchmarks/" \
 --model "DaAnonymization" \
 --bert_weighting
 
 $PYTHON src/benchmark/benchmark_model.py \
 --gold_standard_file "./data/annotations_15_04_2025.json" \
---masked_output_dir "./output/predictions/" \
+--masked_output_file "./output/predictions/" \
 --benchmark_output_dir "./output/benchmarks/" \
 --model "DaAnonymization_FG" \
 --bert_weighting
 
 $PYTHON src/benchmark/benchmark_model.py \
 --gold_standard_file "./data/annotations_15_04_2025.json" \
---masked_output_dir "./output/predictions/" \
+--masked_output_file "./output/predictions/" \
 --benchmark_output_dir "./output/benchmarks/" \
 --model "Gemma" \
 --bert_weighting

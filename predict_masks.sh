@@ -27,8 +27,7 @@ $PYTHON src/predict/DaAnonymization_predict.py \
 
 $PYTHON src/predict/gemma_predict.py \
 --data_path "./data/annotations_15_04_2025.json" \
---save_path "./output/predictions/" \
---cloud
+--save_path "./output/predictions/" 
 
 # Deactivate the virtual environment
 deactivate
