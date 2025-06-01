@@ -6,10 +6,6 @@
       <Header name="title" value="Annoter dokumentet for at anonymisere personer" style="text-align: center; margin-bottom: 40px" underline="true" size="2"/>
     </View>
     
-    <View>
-      <Header name="instructions" value="OBS: Annoteringsguiden kan findes ved at klikke på Instructions." style="text-align: center; margin-bottom: 40px" size="5"/>
-    </View>
-    
   </View>
   
   <View>
